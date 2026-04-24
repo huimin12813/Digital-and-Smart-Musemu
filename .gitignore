@@ -1,0 +1,28 @@
+# Built application files
+target/
+*.class
+*.jar
+*.war
+
+# AI Models - exclude large model files
+models/
+*.pt
+*.onnx
+*.h5
+*.pb
+
+# Database files
+*.db
+*.sqlite
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,76 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: museumPC
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+  main:
+    allow-circular-references: true
+  datasource:
+    url: jdbc:mysql://localhost:3306/museum?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 12345678    # <--- 老师电脑上需要改这里
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+# MQTT 物联网配置
+mqtt:
+  host-url: tcp://localhost:1883
+  username:
+  password:
+  clientId: spring-mqtt
+  timeout: 10
+  keep-alive: 20
+  clean-session: true
+  reconnect: true
+  qos: 1
+  subscribe-topic: museum/+/sensors
+  send-topic: museum/+/actuators
+
+# 日志配置
+logging:
+  level:
+    org.springframework: INFO
+    org.springframework.jdbc: INFO
+
+# AI 大模型在线 API 配置 (DeepSeek & Tavily)
+ai:
+  deepseek:
+    base-url: https://api.deepseek.com
+    api-key: sk-5a833bec75404805845a1ff025680411
+    model-name: deepseek-chat
+    temperature: 0.7
+  tavily:
+    api-key: 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
+
+# 人脸识别模型配置 (使用相对路径，开箱即用)
+face:
+  detect:
+    model-type: MTCNN
+    model-path: ./models/FaceDetection/mtcnn
+    confidence-threshold: 0.3
+    nms-threshold: 0.4
+    device: CPU
+  liveness:
+    enabled: true
+    model-type: IIC_FL_MODEL
+    model-path: ./models/FaceDetection/LivenessDecetion/IIC_Fl.onnx
+    reality-threshold: 0.7
+    device: CPU
+    frame-count: 10
+    max-video-detect-frames: 30
+  recognize:
+    model-type: INSIGHT_FACE_IRSE50_MODEL
+    model-path: ./models/FaceDetection/FaceRecognition/model_ir_se50.pt
+
+# 视觉神经 AI 模型配置 (使用相对路径，开箱即用)
+vision:
+  models:
+    fire:
+      path: ./models/FireSmoke
+      name: best
+    abnormal:
+      path: ./models/abnormalBehavior
+      name: best

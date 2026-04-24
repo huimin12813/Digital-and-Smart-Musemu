@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus | 智慧博物馆</title>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", sans-serif;
+            background-color: #f5f5f7; color: #1d1d1f; -webkit-font-smoothing: antialiased;
+            margin: 0; height: 100vh; overflow: hidden;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .apple-card {
+            background-color: #ffffff; border-radius: 28px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.04);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .apple-card-hover:hover { transform: scale(1.015); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+
+        .ios-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .ios-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #e9e9ea; transition: .3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: #34c759; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .video-main { transform: scaleX(-1); object-fit: cover; border-radius: 24px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        @keyframes scan-line { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+        .scan-effect { position: absolute; left: 0; width: 100%; height: 2px; background: #0071E3; box-shadow: 0 0 15px 2px #0071E3; animation: scan-line 2.5s infinite linear; pointer-events: none; }
+        .scan-effect-green { background: #34C759; box-shadow: 0 0 15px 2px #34C759; }
+
+        @keyframes globalWave { 0% { opacity: 0.4; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0.4; transform: scale(0.9); } }
+        .global-mic-pulse { animation: globalWave 2s infinite ease-in-out; }
+
+        /* ================= 👑 全新高阶极简 3D 引擎 ================= */
+        .scene-container {
+            perspective: 2500px;
+        }
+
+        .world-3d {
+            width: 800px;
+            height: 700px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.2, 1);
+        }
+
+        .base-grid {
+            position: absolute;
+            inset: -300px;
+            transform: translateZ(-150px);
+            background-image: linear-gradient(rgba(0,113,227,0.08) 2px, transparent 2px), linear-gradient(90deg, rgba(0,113,227,0.08) 2px, transparent 2px);
+            background-size: 80px 80px;
+            border-radius: 50%;
+            box-shadow: inset 0 0 150px #f5f5f7;
+            pointer-events: none;
+        }
+
+        .floating-island {
+            position: absolute;
+            transform-style: preserve-3d;
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255,255,255,0.9);
+            border-radius: 32px;
+            box-shadow:
+                    0 20px 40px rgba(0,0,0,0.06),
+                    inset 0 0 0 4px rgba(255,255,255,0.5);
+            transition: all 0.8s cubic-bezier(0.25, 1, 0.2, 1);
+        }
+        .floating-island::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            transform: translateZ(-20px);
+            background: #e5e5ea;
+            border-radius: 32px;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.12);
+            z-index: -1;
+        }
+
+        .island-a {
+            top: 5%; left: 0%; width: 45%; height: 90%;
+            transform: translateZ(80px);
+        }
+        .island-b {
+            top: 15%; right: 0%; width: 45%; height: 80%;
+            transform: translateZ(20px);
+        }
+
+        .showcase-outline {
+            position: absolute;
+            border: 2px dashed rgba(0, 113, 227, 0.2);
+            border-radius: 12px;
+            background: rgba(0, 113, 227, 0.02);
+            pointer-events: none;
+        }
+
+        .device-node {
+            position: absolute;
+            transform-style: preserve-3d;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 20;
+        }
+        .device-node:hover, .device-node.active-focus {
+            transform: scale(1.5) translateZ(40px);
+        }
+
+        .hologram-label {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform-origin: bottom center;
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.2, 1);
+            pointer-events: none;
+        }
+
+        @keyframes force-field-pulse-light {
+            0% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px rgba(0, 113, 227, 0.3), inset 0 0 10px rgba(0, 113, 227, 0.2); }
+            100% { transform: scale(3.5); opacity: 0; box-shadow: 0 0 40px rgba(0, 113, 227, 0), inset 0 0 20px rgba(0, 113, 227, 0); }
+        }
+        @keyframes force-field-alert-light {
+            0% { transform: scale(1); opacity: 1; box-shadow: 0 0 15px rgba(255, 59, 48, 0.6), inset 0 0 15px rgba(255, 59, 48, 0.4); }
+            100% { transform: scale(3); opacity: 0; box-shadow: 0 0 50px rgba(255, 59, 48, 0), inset 0 0 30px rgba(255, 59, 48, 0); }
+        }
+        .force-field {
+            position: absolute; inset: -8px; border-radius: 50%;
+            border: 2px solid rgba(0, 113, 227, 0.5); pointer-events: none;
+            animation: force-field-pulse-light 2s infinite cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .force-field.alert-mode {
+            border-color: rgba(255, 59, 48, 0.9);
+            animation: force-field-alert-light 0.6s infinite cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes radarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .radar-sweep-global {
+            position: absolute; top: 50%; left: 50%; width: 200%; height: 200%;
+            background: conic-gradient(from 0deg at 50% 50%, transparent 70%, rgba(0,113,227,0.06) 100%);
+            transform-origin: 0 0; animation: radarSpin 12s linear infinite; pointer-events: none;
+        }
+
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="app" v-cloak class="h-full w-full relative">
+
+    <div class="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] transition-all duration-500 ease-out"
+         :class="toast.show ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0 pointer-events-none'">
+        <div class="px-6 py-3 rounded-full shadow-xl border border-white/50 backdrop-blur-xl text-sm font-medium flex items-center gap-3 bg-white/95 text-gray-800">
+            <i :data-lucide="toast.icon" :class="toast.color" class="w-4 h-4"></i>
+            {{ toast.message }}
+        </div>
+    </div>
+
+    <div v-if="!isLoggedIn" class="fixed inset-0 z-[2000] bg-[#f5f5f7] flex items-center justify-center">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/10 blur-[120px] rounded-full"></div>
+            <div class="absolute top-[60%] -right-[10%] w-[40%] h-[40%] bg-green-500/10 blur-[120px] rounded-full"></div>
+        </div>
+
+        <div class="apple-card relative z-10 w-[420px] p-10 flex flex-col items-center shadow-2xl">
+            <span class="bg-[#0071e3]/10 p-3 rounded-2xl mb-4"><i data-lucide="scan-face" class="w-8 h-8 text-[#0071e3]"></i></span>
+            <h2 class="text-2xl font-semibold tracking-tight text-[#1d1d1f] mb-1">Nexus 核心中枢</h2>
+            <p class="text-xs text-gray-500 mb-8">文物保护与防盗系统已就绪</p>
+
+            <div class="flex bg-gray-50 p-1 rounded-full text-xs font-medium mb-8 w-full border border-gray-100">
+                <button @click="authMode='LOGIN'" :class="authMode==='LOGIN'?'bg-white shadow text-black':'text-gray-500 hover:text-black'" class="flex-1 py-2 rounded-full transition-all">安全核验</button>
+                <button @click="authMode='REGISTER'" :class="authMode==='REGISTER'?'bg-white shadow text-black':'text-gray-500 hover:text-black'" class="flex-1 py-2 rounded-full transition-all">新元录入</button>
+            </div>
+
+            <div class="w-40 h-40 rounded-full overflow-hidden relative border-4 border-white shadow-inner mb-8 bg-gray-100">
+                <video id="authVideo" autoplay muted playsinline class="w-full h-full object-cover transform -scale-x-100"></video>
+                <div v-if="authLoading" class="absolute left-0 top-0 w-full h-[2px] bg-[#0071E3] shadow-[0_0_15px_2px_#0071E3] animate-[scan-line_2s_infinite_linear]"></div>
+            </div>
+
+            <div v-if="authMode === 'REGISTER'" class="w-full mb-6 space-y-3 animate-fade-in">
+                <input v-model="authForm.name" placeholder="您的真实姓名" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all">
+                <select v-model="authForm.role" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white transition-all">
+                    <option value="admin">系统管理员 (Admin)</option>
+                    <option value="staff">巡检员工 (Staff)</option>
+                </select>
+            </div>
+
+            <button @click="submitAuth" :disabled="authLoading" class="w-full py-3.5 bg-[#1d1d1f] hover:bg-black text-white font-semibold rounded-xl transition-all disabled:opacity-50 shadow-md">
+                {{ authLoading ? '特征提取中...' : (authMode === 'LOGIN' ? '开始核验' : '采集并录入') }}
+            </button>
+        </div>
+    </div>
+
+    <div v-if="isLoggedIn" class="h-full flex flex-col relative animate-fade-in bg-[#f5f5f7]">
+
+        <nav class="w-full flex justify-between items-center px-8 h-14 text-xs font-medium text-gray-800 bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 flex-shrink-0">
+            <div class="flex items-center gap-3 text-[#1d1d1f]">
+                <i data-lucide="box" class="w-5 h-5 text-[#0071e3]"></i>
+                <span class="font-semibold tracking-wider">NEXUS</span>
+
+                <div class="ml-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-200 transition-all cursor-pointer hover:bg-gray-100"
+                     :class="isGlobalListening ? 'bg-blue-50/80 border-blue-200 hover:bg-blue-100' : ''" @click="toggleGlobalVoice">
+                    <div :class="isGlobalListening ? 'bg-[#0071e3] global-mic-pulse' : 'bg-gray-400'" class="w-2 h-2 rounded-full"></div>
+                    <span :class="isGlobalListening ? 'text-[#0071e3] font-bold' : 'text-gray-500'">{{ isGlobalListening ? 'Nexus 正在聆听...' : '语音唤醒休眠中' }}</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-8 h-full absolute left-1/2 -translate-x-1/2">
+                <div v-for="m in menus" :key="m.id" class="relative group h-full flex items-center px-2">
+                    <div @click.stop.prevent="selectMenu(m.id)"
+                         :class="['cursor-pointer transition-colors flex items-center gap-1', activeTab === m.id ? 'text-[#0071e3] font-bold' : 'text-gray-500 hover:text-black']">
+                        {{ m.name }}
+                        <span v-if="m.hasSub"><i data-lucide="chevron-down" class="w-3 h-3 opacity-50 group-hover:opacity-100"></i></span>
+                    </div>
+                    <div v-if="m.hasSub" class="absolute top-[32px] pt-6 left-1/2 -translate-x-1/2 z-[100] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all">
+                        <div class="min-w-[150px] bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl shadow-xl flex flex-col py-2">
+                            <div v-for="sub in m.subs" :key="sub.id" @click.stop.prevent="selectSubMenu(m.id, sub.id)"
+                                 class="px-5 py-3 cursor-pointer text-[13px] text-gray-600 hover:text-[#0071e3] hover:bg-blue-50 transition-colors font-medium">
+                                {{ sub.name }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <div @click="openPersonnel" class="flex items-center gap-1.5 cursor-pointer transition-colors"
+                     :class="activeTab==='OPS' && opsSubTab==='FACE_ARCHIVE' ? 'text-[#0071e3] font-bold' : 'text-gray-500 hover:text-black'">
+                    <i data-lucide="users" class="w-4 h-4"></i>
+                    <span class="font-medium">人员管理</span>
+                </div>
+
+                <div class="flex items-center gap-2 text-gray-500 hover:text-black cursor-pointer transition-colors" @click="logout">
+                    <i data-lucide="user" class="w-4 h-4"></i>
+                    <span>{{ currentUser?.name || '管理员' }}</span>
+                    <i data-lucide="log-out" class="w-4 h-4 ml-2 opacity-50"></i>
+                </div>
+            </div>
+        </nav>
+
+        <main class="flex-1 relative overflow-y-auto no-scrollbar scroll-smooth flex flex-col">
+
+            <div v-if="activeTab === 'DEVICE'" :key="'dev-'+selectedRegion" class="w-full h-full flex flex-col relative overflow-hidden bg-transparent">
+
+                <header class="px-10 pt-8 pb-2 shrink-0 flex justify-between items-end z-20 relative pointer-events-none">
+                    <div>
+                        <h1 class="text-4xl font-semibold tracking-tight text-[#1d1d1f]">
+                            {{ selectedRegion === 'ALL' ? '全馆文物保护矩阵' : selectedRegion + ' 专属监测视界' }}
+                        </h1>
+                        <p class="text-gray-500 mt-2 text-xs uppercase tracking-widest font-semibold opacity-70">
+                            Isometric Multi-Plane Digital Twin
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-3 pointer-events-auto">
+                        <div class="flex gap-2 mr-4">
+                            <span class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-white/60 backdrop-blur rounded-full shadow-sm border border-white"><span class="w-2 h-2 rounded-full bg-[#0071e3]"></span> 正常</span>
+                            <span class="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-white/60 backdrop-blur rounded-full shadow-sm border border-white"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> 警报</span>
+                        </div>
+
+                        <button @click="toggleForceField" class="flex items-center gap-2 px-5 py-2.5 text-[13px] font-bold rounded-full transition-all shadow-sm"
+                                :class="isForceFieldActive ? 'bg-blue-50 text-[#0071e3] border border-blue-200' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'">
+                            <i data-lucide="shield" class="w-4 h-4"></i>
+                            {{ isForceFieldActive ? '力场防御中' : '微环境力场' }}
+                        </button>
+
+                        <button @click="runCrossValidationDemo" :disabled="isSimulating" class="flex items-center gap-2 px-5 py-2.5 text-[13px] font-bold rounded-full transition-all shadow-sm disabled:opacity-50"
+                                :class="isSimulating ? 'bg-red-50 text-red-600 border border-red-200 animate-pulse' : 'bg-white text-red-600 border border-red-200 hover:bg-red-50'">
+                            <i data-lucide="crosshair" class="w-4 h-4"></i>
+                            {{ isSimulating ? '比对中...' : '防误报演练' }}
+                        </button>
+
+                        <button @click="togglePatrol" class="flex items-center gap-2 px-6 py-2.5 text-[13px] font-bold rounded-full shadow-lg transition-all border border-transparent"
+                                :class="isPatrolling ? 'bg-[#0071e3] text-white animate-pulse shadow-blue-500/30' : 'bg-[#1d1d1f] text-white hover:bg-black hover:shadow-xl'">
+                            <i :data-lucide="isPatrolling ? 'stop-circle' : 'scan'" class="w-4 h-4"></i>
+                            {{ isPatrolling ? '终止巡检' : '沉浸式云巡检' }}
+                        </button>
+                    </div>
+                </header>
+
+                <div class="flex-1 relative w-full flex items-center justify-center overflow-hidden scene-container" @click="!isPatrolling && !isSimulating && (selectedDevice = null)">
+                    <div class="world-3d" :style="worldTransform">
+
+                        <div class="base-grid">
+                            <div class="radar-sweep-global"></div>
+                        </div>
+
+                        <div class="floating-island island-a" :class="{'opacity-20': selectedRegion !== 'ALL' && !selectedRegion.includes('A')}">
+                            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/80 to-transparent opacity-50 rounded-32 pointer-events-none"></div>
+                            <div class="showcase-outline" style="top: 20%; left: 20%; width: 60%; height: 25%;"></div>
+                            <div class="showcase-outline" style="top: 55%; left: 20%; width: 60%; height: 25%;"></div>
+                            <div class="absolute bottom-6 w-full text-center text-[#0071e3] font-bold text-3xl tracking-widest opacity-20">A 区 展 览 馆</div>
+
+                            <div v-for="(device, index) in aDevices" :key="device.deviceId || device.device_id"
+                                 @click.stop="!isPatrolling && !isSimulating && openDevicePanel(device)"
+                                 :style="getDeviceLocalStyle(index)"
+                                 class="device-node"
+                                 :class="(isPatrolling || isSimulating) && selectedDevice && (selectedDevice.deviceId || selectedDevice.device_id) === (device.deviceId || device.device_id) ? 'active-focus' : ''">
+
+                                <div class="w-3 h-3 rounded-full border-2 border-white shadow-md relative flex items-center justify-center" :class="getDotColorClass(device)">
+                                    <div v-if="isForceFieldActive" class="force-field" :class="{'alert-mode': isSimulating && selectedDevice && (selectedDevice.deviceId || selectedDevice.device_id) === (device.deviceId || device.device_id)}"></div>
+                                    <span v-if="getDotStatus(device) !== 'OFFLINE'" class="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" :class="getDotStatus(device) === 'ALARM' ? 'bg-red-400' : 'bg-blue-400'"></span>
+                                </div>
+
+                                <div class="hologram-label" :style="standUpTransform">
+                                    <div class="px-2.5 py-1 text-[11px] font-bold text-[#1d1d1f] bg-white/85 backdrop-blur-lg rounded-md shadow-lg border border-white flex flex-col items-center">
+                                        {{ device.name }}
+                                    </div>
+                                    <div class="w-px h-6 bg-gradient-to-b from-[#1d1d1f]/40 to-transparent mx-auto"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="floating-island island-b" :class="{'opacity-20': selectedRegion !== 'ALL' && !selectedRegion.includes('B')}">
+                            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/80 to-transparent opacity-50 rounded-32 pointer-events-none"></div>
+                            <div class="showcase-outline" style="top: 20%; left: 20%; width: 60%; height: 25%;"></div>
+                            <div class="showcase-outline" style="top: 55%; left: 20%; width: 60%; height: 25%;"></div>
+                            <div class="absolute bottom-6 w-full text-center text-gray-400 font-bold text-3xl tracking-widest opacity-30">B 区 珍 藏 馆</div>
+
+                            <div v-for="(device, index) in bDevices" :key="device.deviceId || device.device_id"
+                                 @click.stop="!isPatrolling && !isSimulating && openDevicePanel(device)"
+                                 :style="getDeviceLocalStyle(index)"
+                                 class="device-node"
+                                 :class="(isPatrolling || isSimulating) && selectedDevice && (selectedDevice.deviceId || selectedDevice.device_id) === (device.deviceId || device.device_id) ? 'active-focus' : ''">
+
+                                <div class="w-3 h-3 rounded-full border-2 border-white shadow-md relative flex items-center justify-center" :class="getDotColorClass(device)">
+                                    <div v-if="isForceFieldActive" class="force-field" :class="{'alert-mode': isSimulating && selectedDevice && (selectedDevice.deviceId || selectedDevice.device_id) === (device.deviceId || device.device_id)}"></div>
+                                    <span v-if="getDotStatus(device) !== 'OFFLINE'" class="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" :class="getDotStatus(device) === 'ALARM' ? 'bg-red-400' : 'bg-blue-400'"></span>
+                                </div>
+
+                                <div class="hologram-label" :style="standUpTransform">
+                                    <div class="px-2.5 py-1 text-[11px] font-bold text-[#1d1d1f] bg-white/85 backdrop-blur-lg rounded-md shadow-lg border border-white flex flex-col items-center">
+                                        {{ device.name }}
+                                    </div>
+                                    <div class="w-px h-6 bg-gradient-to-b from-[#1d1d1f]/40 to-transparent mx-auto"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="absolute top-4 right-6 w-[380px] bottom-4 bg-white/80 backdrop-blur-3xl border border-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-transform duration-500 z-[100] flex flex-col rounded-[32px] overflow-hidden"
+                     :style="{ transform: selectedDevice ? 'translateX(0)' : 'translateX(150%)' }"
+                     @click.stop>
+
+                    <div v-if="selectedDevice" class="flex flex-col h-full">
+                        <div class="flex justify-between items-center px-8 py-6 border-b border-gray-100/50 bg-white/50">
+                            <div>
+                                <span class="text-[10px] font-bold text-white px-2.5 py-1 rounded-md uppercase tracking-widest shadow-sm"
+                                      :class="isSimulating ? 'bg-red-500 animate-pulse' : (getDotStatus(selectedDevice) === 'ALARM' ? 'bg-red-500 animate-pulse' : (getDotStatus(selectedDevice) === 'ONLINE' ? 'bg-[#0071e3]' : 'bg-gray-400'))">
+                                    {{ isSimulating ? '🚨 防误报侦测中' : (isPatrolling ? '🔍 巡检中' : getDotStatus(selectedDevice)) }}
+                                </span>
+                            </div>
+                            <button v-if="!isPatrolling && !isSimulating" @click="selectedDevice = null" class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors text-gray-500">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto px-8 py-8 no-scrollbar">
+                            <h3 class="text-2xl font-bold tracking-tight text-[#1d1d1f] mb-2">{{ selectedDevice.name }}</h3>
+                            <p class="text-xs font-semibold text-gray-400 mb-8 flex items-center gap-2 uppercase tracking-wider">
+                                <span class="bg-blue-50 text-[#0071e3] px-2 py-0.5 rounded">{{ selectedDevice.region }}</span>
+                                <span>ID: {{selectedDevice.deviceId || selectedDevice.device_id}}</span>
+                            </p>
+
+                            <div class="w-full h-40 bg-gradient-to-br from-gray-50 to-gray-100 rounded-[24px] flex flex-col justify-center items-center mb-8 border border-gray-200/50 shadow-inner relative overflow-hidden">
+                                <div class="absolute inset-0 opacity-10 cyber-grid"></div>
+                                <span v-if="(selectedDevice.name||'').includes('灯')"><i data-lucide="lightbulb" class="w-12 h-12 text-gray-400 z-10 relative drop-shadow-sm"></i></span>
+                                <span v-else-if="(selectedDevice.name||'').includes('门')"><i data-lucide="door-closed" class="w-12 h-12 text-gray-400 z-10 relative drop-shadow-sm"></i></span>
+                                <span v-else><i data-lucide="cpu" class="w-12 h-12 text-gray-400 z-10 relative drop-shadow-sm"></i></span>
+                                <div v-if="isPatrolling" class="absolute bottom-3 left-4 text-[10px] text-[#0071e3] font-mono font-bold flex items-center gap-1.5 z-10"><span class="w-1.5 h-1.5 bg-[#0071e3] rounded-full animate-pulse shadow-[0_0_8px_#0071e3]"></span> CLOUD PATROL</div>
+                                <div v-if="isSimulating" class="absolute bottom-3 left-4 text-[10px] text-red-500 font-mono font-bold flex items-center gap-1.5 z-10"><span class="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_red]"></span> IR THERMAL ACTIVE</div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between bg-white p-5 rounded-[20px] shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100">
+                                    <div>
+                                        <p class="text-[13px] font-bold text-gray-800">安防布防锁定</p>
+                                        <p class="text-[11px] text-gray-400 mt-1">系统全权接管该展柜保护</p>
+                                    </div>
+                                    <label class="ios-switch shrink-0 scale-90 origin-right">
+                                        <input type="checkbox" :checked="selectedDevice.armStatus === 1 || selectedDevice.arm_status === 1" @change="handleArm(selectedDevice)" :disabled="isPatrolling || isSimulating">
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <button @click="handleHardware(selectedDevice.deviceId || selectedDevice.device_id, 'led', selectedDevice.ledStatus || selectedDevice.led_status)"
+                                            :disabled="isPatrolling || isSimulating"
+                                            :class="(selectedDevice.ledStatus === 1 || selectedDevice.led_status === 1) ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' : 'bg-white text-gray-800 border border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'"
+                                            class="py-4 rounded-[20px] text-[13px] font-bold transition-all flex flex-col items-center gap-2 disabled:opacity-50">
+                                        <i data-lucide="power" class="w-5 h-5"></i>
+                                        {{ (selectedDevice.ledStatus === 1 || selectedDevice.led_status === 1) ? '关闭设备(LED)' : '开启设备(LED)' }}
+                                    </button>
+
+                                    <button @click="handleHardware(selectedDevice.deviceId || selectedDevice.device_id, 'light', selectedDevice.lightStatus || selectedDevice.light_status)"
+                                            :disabled="isPatrolling || isSimulating"
+                                            :class="(selectedDevice.lightStatus === 1 || selectedDevice.light_status === 1) ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-white text-gray-800 border border-gray-200 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200'"
+                                            class="py-4 rounded-[20px] text-[13px] font-bold transition-all flex flex-col items-center gap-2 disabled:opacity-50">
+                                        <i data-lucide="sun" class="w-5 h-5"></i>
+                                        {{ (selectedDevice.lightStatus === 1 || selectedDevice.light_status === 1) ? '关闭展柜照明' : '开启展柜照明' }}
+                                    </button>
+
+                                    <button @click="handleHardware(selectedDevice.deviceId || selectedDevice.device_id, 'buzzer', selectedDevice.buzzerStatus || selectedDevice.buzzer_status)"
+                                            :disabled="isPatrolling || isSimulating"
+                                            :class="(selectedDevice.buzzerStatus === 1 || selectedDevice.buzzer_status === 1) ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'bg-white text-gray-800 border border-gray-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200'"
+                                            class="py-4 rounded-[20px] text-[13px] font-bold transition-all flex flex-col items-center gap-2 disabled:opacity-50">
+                                        <i data-lucide="bell-ring" class="w-5 h-5"></i>
+                                        {{ (selectedDevice.buzzerStatus === 1 || selectedDevice.buzzer_status === 1) ? '切断蜂鸣警报' : '拉响蜂鸣警报' }}
+                                    </button>
+
+                                    <button @click="handleHardware(selectedDevice.deviceId || selectedDevice.device_id, 'motor', selectedDevice.motorStatus || selectedDevice.motor_status)"
+                                            :disabled="isPatrolling || isSimulating"
+                                            :class="(selectedDevice.motorStatus === 1 || selectedDevice.motor_status === 1) ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-white text-gray-800 border border-gray-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200'"
+                                            class="py-4 rounded-[20px] text-[13px] font-bold transition-all flex flex-col items-center gap-2 disabled:opacity-50">
+                                        <i data-lucide="settings" class="w-5 h-5" :class="{'animate-spin': (selectedDevice.motorStatus === 1 || selectedDevice.motor_status === 1)}"></i>
+                                        {{ (selectedDevice.motorStatus === 1 || selectedDevice.motor_status === 1) ? '停止步进电机' : '启动步进电机' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'DASH'" class="max-w-7xl mx-auto px-8 pt-12 pb-24 animate-fade-in w-full">
+                <h2 class="text-4xl font-semibold tracking-tight mb-10">环境监控</h2>
+                <div class="grid grid-cols-4 gap-6 mb-10">
+                    <div v-for="s in sensorStats" :key="s.label" class="apple-card p-6 flex flex-col justify-between h-32">
+                        <div class="flex justify-between items-center text-gray-500">
+                            <span class="text-xs font-semibold">{{s.label}}</span>
+                            <i :data-lucide="s.icon" class="w-5 h-5"></i>
+                        </div>
+                        <p class="text-4xl font-semibold">{{s.value}}<span class="text-lg text-gray-400 ml-1">{{s.unit}}</span></p>
+                    </div>
+                </div>
+                <div class="apple-card p-10 h-[500px] flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-[#1d1d1f]">24H 趋势感知</h3>
+                        <div class="flex bg-gray-100 p-1 rounded-full text-xs font-medium">
+                            <button v-for="opt in ['temperature', 'humidity', 'light', 'smoke']" :key="opt"
+                                    @click="chartField = opt; updateChartData()"
+                                    :class="chartField === opt ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'"
+                                    class="px-4 py-1.5 rounded-full transition-all">
+                                {{ opt === 'temperature'?'温度':(opt==='humidity'?'湿度':(opt==='light'?'光照':'烟雾')) }}
+                            </button>
+                        </div>
+                    </div>
+                    <div id="mainChart" class="flex-1 w-full min-h-[300px]"></div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'VISION'" class="w-full h-full flex flex-col px-10 pt-8 pb-10 animate-fade-in">
+                <header class="mb-8 shrink-0">
+                    <h2 class="text-4xl font-semibold tracking-tight text-[#1d1d1f]">视觉神经</h2>
+                    <p class="text-gray-500 mt-2 text-sm uppercase tracking-widest font-semibold opacity-70">Real-time Security Vision</p>
+                </header>
+
+                <div class="flex gap-10 flex-1 min-h-0">
+                    <div class="flex-[2] apple-card p-8 flex flex-col relative overflow-hidden">
+
+                        <div class="flex justify-between items-center mb-6 shrink-0 relative z-[60]">
+                            <div class="flex items-center gap-4">
+                                <div class="flex bg-gray-100 p-1 rounded-full text-xs font-medium cursor-pointer border border-gray-200 shadow-sm">
+                                    <button type="button" @click="setVisionMode('FACE')" :class="visionMode==='FACE'?'bg-white shadow text-[#0071e3] font-bold':'text-gray-500 hover:text-black'" class="px-5 py-2 rounded-full transition-all">人脸安防</button>
+                                    <button type="button" @click="setVisionMode('FIRE')" :class="visionMode==='FIRE'?'bg-red-500 shadow text-white font-bold':'text-gray-500 hover:text-red-500'" class="px-5 py-2 rounded-full transition-all">火情侦测</button>
+                                    <button type="button" @click="setVisionMode('BEHAVIOR')" :class="visionMode==='BEHAVIOR'?'bg-purple-600 shadow text-white font-bold':'text-gray-500 hover:text-purple-500'" class="px-5 py-2 rounded-full transition-all">行为分析</button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-semibold text-gray-500">启动摄像头</span>
+                                <label class="ios-switch">
+                                    <input type="checkbox" v-model="isCameraOn" @change="toggleVision($event.target.checked)">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 bg-[#09090b] rounded-[24px] relative overflow-hidden flex items-center justify-center border-4 shadow-inner transition-all duration-500"
+                             :class="(visionMode === 'FIRE' && visionResult.status !== 'normal') || (visionMode === 'BEHAVIOR' && behaviorResult.status === 'danger') ? 'border-red-500 shadow-[inset_0_0_80px_rgba(255,59,48,0.4)]' : 'border-gray-100'">
+
+                            <video id="secVideo" autoplay muted playsinline class="w-full h-full object-cover transform -scale-x-100 absolute inset-0 z-10" :class="{'hidden': !isCameraOn}"></video>
+                            <canvas id="ai-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-20"></canvas>
+
+                            <div v-if="isCameraOn && visionMode === 'FACE'" class="scan-effect scan-effect-green z-30"></div>
+
+                            <div v-if="isCameraOn && visionMode === 'BEHAVIOR' && behaviorResult.status === 'danger'" class="absolute inset-0 flex items-center justify-center pointer-events-none z-40 bg-red-900/20">
+                                <div class="px-8 py-4 bg-red-600/90 backdrop-blur-md rounded-2xl border border-red-400 shadow-2xl flex items-center gap-4 animate-bounce">
+                                    <i data-lucide="alert-octagon" class="w-10 h-10 text-white"></i>
+                                    <div>
+                                        <p class="text-xs font-bold text-red-200 uppercase tracking-widest">Critical Alert</p>
+                                        <p class="text-3xl font-black text-white">检测到异常: {{ behaviorResult.behavior }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div v-if="!isCameraOn" class="text-gray-500 flex flex-col items-center z-0">
+                                <i data-lucide="camera-off" class="w-16 h-16 mb-4 opacity-40"></i>
+                                <p class="text-lg font-medium tracking-widest uppercase">视觉传感器已休眠</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex flex-col gap-6">
+                        <div class="apple-card p-10 flex-1 flex flex-col relative overflow-hidden">
+                            <div class="absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-50 pointer-events-none"
+                                 :class="visionMode==='FACE'?'bg-blue-50':(visionMode==='FIRE'?'bg-red-50':'bg-purple-50')"></div>
+
+                            <div v-if="isCameraOn" class="animate-fade-in relative z-10 flex-1 overflow-y-auto no-scrollbar">
+
+                                <template v-if="visionMode === 'FACE'">
+                                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-6 border"
+                                         :class="secIdentity !== 'Unknown' ? 'bg-[#0071e3]/10 text-[#0071e3] border-[#0071e3]/20' : 'bg-gray-100 text-gray-500 border-gray-200'">
+                                        <span class="w-2 h-2 rounded-full animate-pulse" :class="secIdentity !== 'Unknown' ? 'bg-[#0071e3]' : 'bg-gray-400'"></span>
+                                        <span class="text-[10px] font-bold uppercase tracking-widest">Access Control</span>
+                                    </div>
+                                    <h3 class="text-4xl font-black text-[#1d1d1f] mb-3">{{ secIdentity !== 'Unknown' ? secIdentity : '未识别人员' }}</h3>
+                                    <p class="text-base text-gray-500 mb-8 font-medium border-b border-gray-100 pb-6">{{ secIdentity !== 'Unknown' ? '身份核验通过，已授权' : '请面对摄像头进行特征比对' }}</p>
+                                    <div v-if="secIdentity !== 'Unknown'" class="space-y-4">
+                                        <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-400"><i data-lucide="clock" class="w-5 h-5"></i></div>
+                                            <div>
+                                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">授权时间</p>
+                                                <p class="text-sm font-semibold text-gray-800">{{ formatTime(new Date().toISOString()) }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                            <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-400"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                                            <div>
+                                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">安全等级</p>
+                                                <p class="text-sm font-semibold text-green-600">Level 1 - 允许进入核心区</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <template v-if="visionMode === 'FIRE'">
+                                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border"
+                                         :class="visionResult.status !== 'normal' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-600 border-green-200'">
+                                        <span class="w-2 h-2 rounded-full animate-pulse" :class="visionResult.status !== 'normal' ? 'bg-red-500' : 'bg-green-500'"></span>
+                                        <span class="text-[10px] font-bold uppercase tracking-widest">Fire & Smoke Detection</span>
+                                    </div>
+                                    <h3 class="text-4xl font-black text-[#1d1d1f] mb-3">
+                                        {{ visionResult.status === 'fire_and_smoke' ? '发现火情与烟雾' : (visionResult.status === 'fire' ? '发现明火' : (visionResult.status === 'smoke' ? '发现异常烟雾' : '环境安全')) }}
+                                    </h3>
+                                    <p class="text-base text-gray-500 mb-8 font-medium border-b border-gray-100 pb-6">
+                                        {{ visionResult.status !== 'normal' ? '系统已自动拉响警报并阻断区域' : '实时AI视觉分析引擎运行中，未见异常' }}
+                                    </p>
+                                    <div v-if="visionResult.detections && visionResult.detections.length > 0" class="space-y-3">
+                                        <div v-for="(det, idx) in visionResult.detections" :key="idx" class="flex justify-between items-center bg-red-50/50 p-4 rounded-xl border border-red-100">
+                                            <span class="flex items-center text-sm font-bold text-red-600 uppercase tracking-wider">
+                                                <i data-lucide="crosshair" class="w-4 h-4 mr-2"></i> {{ det.name }}
+                                            </span>
+                                            <span class="font-mono text-red-500 font-bold">{{ (det.confidence * 100).toFixed(1) }}%</span>
+                                        </div>
+                                    </div>
+                                    <div v-else class="mt-8 flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50/50">
+                                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-green-500 mb-3 shadow-sm">
+                                            <i data-lucide="check-circle" class="w-8 h-8"></i>
+                                        </div>
+                                        <p class="text-sm font-bold text-gray-800">全域监控中</p>
+                                        <p class="text-xs text-gray-400 mt-1">未检测到明火或烟雾</p>
+                                    </div>
+                                </template>
+
+                                <template v-if="visionMode === 'BEHAVIOR'">
+                                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border"
+                                         :class="behaviorResult.status === 'danger' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-purple-50 text-purple-600 border-purple-200'">
+                                        <span class="w-2 h-2 rounded-full animate-pulse" :class="behaviorResult.status === 'danger' ? 'bg-red-500' : 'bg-purple-500'"></span>
+                                        <span class="text-[10px] font-bold uppercase tracking-widest">Behavior Analysis</span>
+                                    </div>
+                                    <h3 class="text-4xl font-black text-[#1d1d1f] mb-3">{{ behaviorResult.status === 'danger' ? '🚨 异常行为警告' : '行为举止正常' }}</h3>
+                                    <p class="text-base text-gray-500 font-medium border-b border-gray-100 pb-6 mb-5">
+                                        {{ behaviorResult.status === 'danger' ? '检测到疑似异常行为，已自动触发联动派发工单' : '全局场景行为分类引擎运行中' }}
+                                    </p>
+
+                                    <div v-if="behaviorResult.topK && behaviorResult.topK.length > 0" class="space-y-4 mb-6">
+                                        <div v-for="(item, idx) in behaviorResult.topK.slice(0, 3)" :key="idx" class="flex items-center gap-3">
+                                            <span class="text-xs font-bold text-gray-600 w-24 truncate text-right uppercase tracking-wider">{{ item.className }}</span>
+                                            <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                                                <div class="h-full rounded-full transition-all duration-700 ease-out"
+                                                     :class="idx === 0 && behaviorResult.status === 'danger' ? 'bg-gradient-to-r from-red-400 to-red-600' : (idx === 0 ? 'bg-gradient-to-r from-purple-400 to-purple-600' : 'bg-gray-300')"
+                                                     :style="{ width: ((item.confidence || 0) * 100) + '%' }">
+                                                </div>
+                                            </div>
+                                            <span class="text-xs font-mono font-black w-14 text-right" :class="idx === 0 ? (behaviorResult.status === 'danger' ? 'text-red-600' : 'text-purple-600') : 'text-gray-400'">
+                                                {{ ((item.confidence || 0) * 100).toFixed(1) }}%
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="behaviorResult.status === 'danger'" class="mt-6 p-6 bg-gradient-to-br from-red-50 to-red-100/50 border-2 border-red-200 rounded-2xl animate-pulse shadow-lg shadow-red-500/10">
+                                        <div class="flex items-center gap-4">
+                                            <div class="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center text-white shadow-md">
+                                                <i data-lucide="shield-alert" class="w-6 h-6"></i>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Target Locked</p>
+                                                <p class="text-lg font-black text-red-700">系统已接管：{{ behaviorResult.behavior }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div v-if="behaviorResult.status !== 'danger' && (!behaviorResult.topK || behaviorResult.topK.length === 0)" class="mt-8 flex flex-col items-center justify-center p-10 border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50/50">
+                                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center text-purple-500 mb-4 shadow-sm">
+                                            <i data-lucide="activity" class="w-8 h-8"></i>
+                                        </div>
+                                        <p class="text-base font-bold text-gray-800">行为动作全域监控中</p>
+                                        <p class="text-sm text-gray-400 mt-1">系统未发现翻越围栏、打架等异常动作</p>
+                                    </div>
+                                </template>
+
+                                <template v-if="visionMode === 'SECURITY'">
+                                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border"
+                                         :class="securityHasAlert ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-600 border-green-200'">
+                                        <span class="w-2 h-2 rounded-full animate-pulse" :class="securityHasAlert ? 'bg-red-500' : 'bg-green-500'"></span>
+                                        <span class="text-[10px] font-bold uppercase tracking-widest">Security Monitor</span>
+                                    </div>
+                                    <h3 class="text-3xl font-black text-[#1d1d1f] mb-2">{{ securityHasAlert ? '检测到异常' : '环境安全' }}</h3>
+                                    <p class="text-sm text-gray-500 font-medium border-b border-gray-100 pb-4 mb-5">{{ securityHasAlert ? securityAlertSummary : '火焰/烟雾/行为均正常' }}</p>
+
+                                    <div class="mb-5">
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">火焰 / 烟雾 (检测)</p>
+                                        <div class="flex items-center gap-3 p-4 rounded-2xl border"
+                                             :class="visionResult.status !== 'normal' ? 'bg-red-50/60 border-red-200' : 'bg-gray-50 border-gray-100'">
+                                            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                                                 :class="visionResult.status !== 'normal' ? 'bg-red-100 text-red-500' : 'bg-green-100 text-green-500'">
+                                                <i :data-lucide="visionResult.status !== 'normal' ? 'flame' : 'check'" class="w-5 h-5"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-bold" :class="visionResult.status !== 'normal' ? 'text-red-600' : 'text-gray-800'">
+                                                    {{ visionResult.status === 'fire_and_smoke' ? '发现火焰与烟雾' : (visionResult.status === 'fire' ? '发现明火' : (visionResult.status === 'smoke' ? '发现烟雾' : '未检测到异常')) }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div v-if="visionResult.detections && visionResult.detections.length > 0" class="mt-2 space-y-2">
+                                            <div v-for="(det, idx) in visionResult.detections" :key="idx" class="flex justify-between items-center px-4 py-2 bg-red-50/40 rounded-xl border border-red-100">
+                                                <span class="text-xs font-bold text-red-600 uppercase">{{ det.name }}</span>
+                                                <span class="font-mono text-xs text-red-500 font-bold">{{ (det.confidence * 100).toFixed(1) }}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-5">
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">行为分析 (分类)</p>
+                                        <div class="flex items-center gap-3 p-4 rounded-2xl border"
+                                             :class="behaviorResult.status === 'danger' ? 'bg-red-50/60 border-red-200' : 'bg-gray-50 border-gray-100'">
+                                            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                                                 :class="behaviorResult.status === 'danger' ? 'bg-red-100 text-red-500 animate-pulse' : 'bg-green-100 text-green-500'">
+                                                <i :data-lucide="behaviorResult.status === 'danger' ? 'alert-triangle' : 'activity'" class="w-5 h-5"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-bold" :class="behaviorResult.status === 'danger' ? 'text-red-600' : 'text-gray-800'">
+                                                    {{ behaviorResult.status === 'danger' ? `检测到异常: ${behaviorResult.behavior}` : '人员行为特征正常' }}
+                                                </p>
+                                                <div v-if="behaviorResult.confidence" class="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div class="h-full rounded-full transition-all duration-500"
+                                                         :class="behaviorResult.status === 'danger' ? 'bg-red-500' : 'bg-green-500'"
+                                                         :style="{ width: ((behaviorResult.confidence || 0) * 100) + '%' }"></div>
+                                                </div>
+                                                <p v-if="behaviorResult.confidence" class="text-[10px] text-gray-400 mt-1 font-mono">
+                                                    {{ behaviorResult.className }} · {{ ((behaviorResult.confidence || 0) * 100).toFixed(1) }}%
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                            </div>
+
+                            <div v-else class="text-center text-gray-400 relative z-10 flex-1 flex flex-col items-center justify-center">
+                                <div class="w-24 h-24 mx-auto bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-inner border border-gray-100">
+                                    <i data-lucide="scan-line" class="w-10 h-10 opacity-40"></i>
+                                </div>
+                                <p class="text-base font-bold tracking-widest text-gray-500 mb-2">等待视觉输入</p>
+                                <p class="text-xs font-medium opacity-60">请在左侧启动主摄像头</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'ALARM'" :key="'alarm-'+activeSubTab" class="max-w-6xl mx-auto px-8 pt-12 pb-24 animate-fade-in w-full">
+                <header class="mb-10"><h2 class="text-4xl font-semibold tracking-tight">{{ alarmTitle }}</h2></header>
+
+                <div v-if="activeSubTab === 'OVERVIEW'" class="grid grid-cols-2 gap-8">
+                    <div class="flex flex-col gap-8">
+                        <div>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-semibold">异常告警</h3>
+                                <div @click.stop.prevent="selectSubMenu('ALARM', 'ALARM_LIST')" class="text-xs text-[#0071e3] hover:underline cursor-pointer font-medium">查看全部 &rarr;</div>
+                            </div>
+                            <div class="apple-card p-2 min-h-[200px]">
+                                <div v-if="alarms.length === 0" class="p-8 text-center text-gray-400 text-sm font-medium">系统运行状态良好</div>
+                                <div v-for="a in alarms.slice(0, 4)" :key="a.id" class="flex items-center justify-between p-4 px-6 border-b border-gray-50 last:border-0 group">
+                                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                                        <div :class="a.level==='critical'?'bg-[#ff453a]':'bg-[#ff9f0a]'" class="w-2 h-2 rounded-full shrink-0"></div>
+                                        <div class="flex-1 min-w-0 pr-2">
+                                            <p class="text-sm font-semibold truncate">{{a.content || a.message || '未知告警'}}</p>
+                                            <p class="text-[11px] text-gray-400 mt-0.5 truncate">Device: {{a.device_id || a.deviceId}} · {{ formatTime(a.create_time || a.createTime) }}</p>
+                                        </div>
+                                    </div>
+                                    <button @click="handleAlarm(a.id)" class="opacity-0 group-hover:opacity-100 px-3 py-1.5 bg-[#34c759] text-white text-[11px] font-semibold rounded-full transition-all shrink-0">处理</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-semibold">维保工单</h3>
+                                <div @click.stop.prevent="selectSubMenu('ALARM', 'WORK_ORDER')" class="text-xs text-[#0071e3] hover:underline cursor-pointer font-medium">全部任务 &rarr;</div>
+                            </div>
+                            <div class="apple-card p-2 min-h-[200px]">
+                                <div v-if="workOrders.length === 0" class="p-8 text-center text-gray-400 text-sm font-medium">暂无待办工单</div>
+                                <div v-for="w in workOrders.slice(0, 3)" :key="w.id" class="flex items-center justify-between p-4 px-6 border-b border-gray-50 last:border-0 group">
+                                    <div class="flex-1 min-w-0 pr-2">
+                                        <p class="text-sm font-semibold truncate">{{w.title || w.order_name || '工单任务'}}</p>
+                                        <p class="text-[11px] text-gray-400 mt-0.5">指派: {{w.assignee || w.person || '未指定'}}</p>
+                                    </div>
+                                    <span class="text-[10px] font-semibold px-2 py-1 bg-gray-100 text-gray-500 rounded uppercase shrink-0">{{w.status || '待处理'}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-semibold">通行日志</h3>
+                            <div @click.stop.prevent="selectSubMenu('ALARM', 'ACCESS_LOG')" class="text-xs text-[#0071e3] hover:underline cursor-pointer font-medium">查看档案 &rarr;</div>
+                        </div>
+                        <div class="apple-card p-2 min-h-[500px]">
+                            <div v-if="accessLogs.length === 0" class="p-8 text-center text-gray-400 text-sm font-medium">暂无通行记录</div>
+                            <div v-for="log in accessLogs.slice(0, 8)" :key="log.id" class="flex items-center justify-between p-4 px-6 border-b border-gray-50 last:border-0">
+                                <div class="flex gap-4 items-center flex-1 min-w-0">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg bg-gray-100 shrink-0">{{ log.granted ? '✅' : '🚫' }}</div>
+                                    <div class="flex-1 min-w-0 pr-2">
+                                        <p class="text-sm font-semibold truncate">{{log.personName || log.person_name}}</p>
+                                        <p class="text-[11px] mt-0.5 truncate" :class="log.granted ? 'text-gray-400' : 'text-red-400'">{{log.reason}}</p>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] text-gray-400 shrink-0">{{ formatTime(log.access_time || log.accessTime) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="activeSubTab === 'ALARM_LIST'" class="apple-card p-6 min-h-[600px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold">异常告警记录</h3>
+                        <span class="text-sm font-medium text-[#0071e3] bg-[#0071e3]/10 px-3 py-1 rounded-full">{{ alarms.length }} 条异常</span>
+                    </div>
+                    <div v-for="a in alarms" :key="a.id" class="flex items-center justify-between p-5 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center gap-4 flex-1 min-w-0">
+                            <div :class="a.level==='critical'?'bg-[#ff453a]':'bg-[#ff9f0a]'" class="w-3 h-3 rounded-full shadow-sm shrink-0"></div>
+                            <div class="flex-1 min-w-0 pr-4">
+                                <p class="text-base font-semibold truncate">{{a.content || a.message || '未知告警'}}</p>
+                                <p class="text-xs text-gray-400 mt-1">关联设备: {{a.device_id || a.deviceId}} &nbsp;|&nbsp; 触发时间: {{ formatTime(a.create_time || a.createTime) }}</p>
+                            </div>
+                        </div>
+                        <button @click="handleAlarm(a.id)" class="px-5 py-2 bg-[#34c759] text-white text-xs font-semibold rounded-full shadow-sm shrink-0">标记解决</button>
+                    </div>
+                </div>
+
+                <div v-if="activeSubTab === 'ACCESS_LOG'" class="apple-card p-6 min-h-[600px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold">通行档案</h3>
+                        <span class="text-sm font-medium text-[#0071e3] bg-[#0071e3]/10 px-3 py-1 rounded-full">最新 {{ accessLogs.length }} 笔记录</span>
+                    </div>
+                    <div v-for="log in accessLogs" :key="log.id" class="flex items-center justify-between p-5 border-b border-gray-100 hover:bg-gray-50/80 transition-colors">
+                        <div class="flex gap-5 items-center flex-1 min-w-0">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-white border border-gray-100 shadow-sm shrink-0">{{ log.granted ? '✅' : '🚫' }}</div>
+                            <div class="flex-1 min-w-0 pr-4">
+                                <p class="text-base font-semibold truncate">{{log.personName || log.person_name}} <span class="text-[10px] text-gray-500 font-semibold uppercase tracking-wider ml-2 px-2 py-0.5 bg-gray-200 rounded">{{log.role}}</span></p>
+                                <p class="text-xs mt-1 truncate" :class="log.granted ? 'text-gray-500' : 'text-red-500 font-medium'">系统判定: {{log.reason}}</p>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <p class="text-sm font-medium text-gray-800">{{ formatTime(log.access_time || log.accessTime) }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="activeSubTab === 'WORK_ORDER'" class="apple-card p-6 min-h-[600px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold">工单管理</h3>
+                        <span class="text-sm font-medium text-[#0071e3] bg-[#0071e3]/10 px-3 py-1 rounded-full">{{ workOrders.length }} 个任务</span>
+                    </div>
+                    <div v-for="w in workOrders" :key="w.id" class="flex items-center justify-between p-5 border-b border-gray-100 hover:bg-gray-50/80 transition-colors">
+                        <div class="flex-1 min-w-0 pr-4">
+                            <p class="text-base font-semibold truncate">{{w.title || w.order_name || '工单任务'}}</p>
+                            <p class="text-xs text-gray-400 mt-1">处理人: <span class="font-medium text-gray-600">{{w.assignee || w.person || '未指派'}}</span></p>
+                        </div>
+                        <div class="flex items-center gap-4 shrink-0">
+                            <span class="text-[11px] font-semibold px-3 py-1 bg-gray-100 text-gray-600 rounded-full uppercase">{{w.status || '待处理'}}</span>
+                            <button v-if="w.status !== 'completed'" @click="completeWorkOrder(w.id)" class="px-5 py-2 bg-[#0071e3] text-white text-xs font-semibold rounded-full shadow-sm">完成归档</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'OPS'" :key="'ops-'+opsSubTab" class="max-w-[1400px] mx-auto px-8 pt-12 pb-24 animate-fade-in w-full">
+
+                <header class="flex justify-between items-end mb-10">
+                    <div class="flex items-center gap-5">
+                        <button v-if="opsSubTab !== 'OVERVIEW'" @click="opsSubTab === 'RULE_FORM' ? goOpsPage('RULE_LIST') : (opsSubTab === 'DEVICE_REGISTER' ? goOpsPage('DEVICE_LEDGER') : goOpsPage('OVERVIEW'))" class="w-10 h-10 rounded-full bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition shadow-sm text-gray-600">
+                            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-4xl font-semibold tracking-tight text-[#1d1d1f]">智慧博物馆管控系统</h2>
+                            <p class="text-gray-500 mt-2 text-sm uppercase tracking-widest font-semibold opacity-70">
+                                {{ opsPageTitle }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-bold text-[#1d1d1f]">{{ formatManagementTime(mgmtNow) }}</div>
+                        <div class="text-xs text-gray-400 mt-1 uppercase tracking-widest">系统管理员 · 管理中枢</div>
+                    </div>
+                </header>
+
+                <div v-if="opsSubTab === 'OVERVIEW'" class="space-y-6">
+                    <div class="grid grid-cols-4 gap-6">
+                        <div class="apple-card p-6 flex flex-col justify-between border-l-4 border-l-[#ff3b30]">
+                            <div class="text-gray-500 text-sm font-semibold mb-2">今日告警</div>
+                            <div class="text-5xl font-semibold text-[#1d1d1f]">{{ overviewStats.todayAlarms }}</div>
+                        </div>
+                        <div class="apple-card p-6 flex flex-col justify-between border-l-4 border-l-[#0071e3]">
+                            <div class="text-gray-500 text-sm font-semibold mb-2">在线设备</div>
+                            <div class="text-5xl font-semibold text-[#1d1d1f]">{{ overviewStats.onlineDevices }}</div>
+                        </div>
+                        <div class="apple-card p-6 flex flex-col justify-between border-l-4 border-l-[#ff9f0a]">
+                            <div class="text-gray-500 text-sm font-semibold mb-2">待办工单</div>
+                            <div class="text-5xl font-semibold text-[#1d1d1f]">{{ overviewStats.pendingWorkorders }}</div>
+                        </div>
+                        <div class="apple-card p-6 flex flex-col justify-between border-l-4 border-l-[#34c759]">
+                            <div class="text-gray-500 text-sm font-semibold mb-2">人脸库记录</div>
+                            <div class="text-5xl font-semibold text-[#1d1d1f]">{{ overviewStats.faceCount }}</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-[2fr_1fr] gap-6">
+                        <div class="apple-card p-8">
+                            <div class="flex items-center justify-between mb-8">
+                                <h3 class="text-2xl font-semibold text-[#1d1d1f] flex items-center gap-2"><i data-lucide="activity" class="w-6 h-6 text-[#0071e3]"></i>实时环境监测中心</h3>
+                                <button @click="syncSensorCards" class="text-sm font-medium px-4 py-2 bg-gray-50 text-gray-600 rounded-full border border-gray-200 hover:bg-gray-100 transition-colors shadow-sm">同步数据</button>
+                            </div>
+                            <div class="grid grid-cols-4 gap-4">
+                                <div class="bg-gray-50/80 rounded-[20px] border border-gray-100 p-6 text-center shadow-sm">
+                                    <div class="text-gray-500 text-sm font-medium mb-3">环境温度</div>
+                                    <div class="text-4xl font-semibold text-[#1d1d1f]">{{ sensorStats[0].value }}<span class="text-lg ml-1 text-gray-400">℃</span></div>
+                                    <div class="mt-4 inline-flex text-[11px] font-bold px-3 py-1 rounded-full" :class="Number(sensorStats[0].value) > 28 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'">{{ Number(sensorStats[0].value) > 28 ? '异常' : '正常' }}</div>
+                                </div>
+                                <div class="bg-gray-50/80 rounded-[20px] border border-gray-100 p-6 text-center shadow-sm">
+                                    <div class="text-gray-500 text-sm font-medium mb-3">相对湿度</div>
+                                    <div class="text-4xl font-semibold text-[#1d1d1f]">{{ sensorStats[1].value }}<span class="text-lg ml-1 text-gray-400">%</span></div>
+                                    <div class="mt-4 inline-flex text-[11px] font-bold px-3 py-1 rounded-full" :class="(Number(sensorStats[1].value) < 40 || Number(sensorStats[1].value) > 75) ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'">{{ (Number(sensorStats[1].value) < 40 || Number(sensorStats[1].value) > 75) ? '异常' : '正常' }}</div>
+                                </div>
+                                <div class="bg-gray-50/80 rounded-[20px] border border-gray-100 p-6 text-center shadow-sm">
+                                    <div class="text-gray-500 text-sm font-medium mb-3">烟雾浓度</div>
+                                    <div class="text-4xl font-semibold text-[#ff3b30]">{{ sensorStats[3].value }}<span class="text-lg ml-1 text-gray-400">ppm</span></div>
+                                    <div class="mt-4 inline-flex text-[11px] font-bold px-3 py-1 rounded-full" :class="Number(sensorStats[3].value) > 100 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'">{{ Number(sensorStats[3].value) > 100 ? '异常' : '正常' }}</div>
+                                </div>
+                                <div class="bg-gray-50/80 rounded-[20px] border border-gray-100 p-6 text-center shadow-sm">
+                                    <div class="text-gray-500 text-sm font-medium mb-3">光照强度</div>
+                                    <div class="text-4xl font-semibold text-[#1d1d1f]">{{ sensorStats[2].value }}<span class="text-lg ml-1 text-gray-400">lux</span></div>
+                                    <div class="mt-4 inline-flex text-[11px] font-bold px-3 py-1 rounded-full bg-green-50 text-green-600">正常</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="apple-card p-8">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-2xl font-semibold text-[#1d1d1f] flex items-center gap-2"><i data-lucide="bell" class="w-6 h-6 text-[#ff9f0a]"></i>安全实时动态</h3>
+                                <span class="text-gray-400 text-xs font-bold uppercase">最近 {{ overviewAlarmFeed.length }} 条</span>
+                            </div>
+                            <div class="h-[480px] overflow-y-auto no-scrollbar pr-2 space-y-3">
+                                <div v-for="a in overviewAlarmFeed" :key="a.id" class="p-4 bg-gray-50 border border-gray-100 rounded-2xl flex items-start gap-3">
+                                    <div class="text-xs font-semibold text-gray-400 w-12 shrink-0 pt-0.5">{{ formatTime(a.create_time || a.createTime).slice(11, 16) }}</div>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded uppercase shrink-0" :class="String(a.level || '').toLowerCase().includes('critical') ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'">{{ String(a.level || '').toLowerCase().includes('critical') ? '紧急' : '警示' }}</span>
+                                    <div class="text-sm font-medium text-gray-800 truncate">{{ a.content || a.message || '告警信息' }}</div>
+                                </div>
+                                <div v-if="overviewAlarmFeed.length === 0" class="h-full flex items-center justify-center text-gray-400 font-medium">暂无实时告警</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="opsSubTab === 'RULE_LIST'" class="apple-card p-8">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-2xl font-semibold text-[#1d1d1f]">告警与联动规则列表</h3>
+                        <button @click="resetRuleForm(); goOpsPage('RULE_FORM')" class="bg-[#0071e3] hover:bg-[#0077ED] text-white px-5 py-2.5 rounded-full text-sm font-semibold transition shadow-sm flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i>创建新规则</button>
+                    </div>
+                    <div class="overflow-x-auto border border-gray-100 rounded-[24px]">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead>
+                            <tr class="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold">规则名称</th>
+                                <th class="px-6 py-4 font-semibold">条件表达式</th>
+                                <th class="px-6 py-4 font-semibold">告警级别</th>
+                                <th class="px-6 py-4 font-semibold">动作类型</th>
+                                <th class="px-6 py-4 font-semibold">启用状态</th>
+                                <th class="px-6 py-4 font-semibold">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody class="text-gray-800">
+                            <tr v-if="rulesLoading">
+                                <td colspan="6" class="px-6 py-8 text-center text-gray-400 font-medium">规则加载中...</td>
+                            </tr>
+                            <tr v-for="rule in rules" :key="rule.id" class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-4 font-medium">{{ rule.name }}</td>
+                                <td class="px-6 py-4"><span class="bg-gray-100 text-gray-600 rounded px-2 py-1 font-mono text-xs border border-gray-200">{{ rule.conditionExpression || '--' }}</span></td>
+                                <td class="px-6 py-4">
+                                    <span class="text-xs font-bold px-3 py-1 rounded-full" :class="getRuleLevelClass(rule.level)">{{ getRuleLevelLabel(rule.level) }}</span>
+                                </td>
+                                <td class="px-6 py-4"><span class="text-xs font-bold px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 rounded-full">{{ (rule.actionType || 'MQTT').toUpperCase() }}</span></td>
+                                <td class="px-6 py-4">
+                                    <label class="ios-switch scale-75 origin-left">
+                                        <input type="checkbox" :checked="rule.enabled" @change="toggleRule(rule)">
+                                        <span class="slider"></span>
+                                    </label>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button @click="editRule(rule)" class="text-[#0071e3] hover:underline font-medium mr-4">编辑</button>
+                                    <button @click="removeRule(rule)" class="text-red-500 hover:underline font-medium">删除</button>
+                                </td>
+                            </tr>
+                            <tr v-if="!rulesLoading && rules.length === 0">
+                                <td colspan="6" class="px-6 py-8 text-center text-gray-400 font-medium">暂无规则</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div v-if="opsSubTab === 'RULE_FORM'" class="apple-card p-10 max-w-4xl mx-auto">
+                    <div class="mb-8 border-b border-gray-100 pb-4">
+                        <h3 class="text-2xl font-semibold text-[#1d1d1f]">{{ editingRuleId ? '编辑联动规则' : '创建新联动规则' }}</h3>
+                    </div>
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">规则名称 <span class="text-red-500">*</span></label>
+                            <input v-model="ruleForm.name" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all" placeholder="例如：一号展柜高温排风联动">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">条件构造器</label>
+                            <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-5 flex items-center gap-3 flex-wrap">
+                                <select v-model="ruleBuilder.sensor" class="bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#0071e3] min-w-[140px]">
+                                    <option value="temperature">temperature (温度)</option>
+                                    <option value="humidity">humidity (湿度)</option>
+                                    <option value="smoke">smoke (烟雾)</option>
+                                    <option value="light">light (光照)</option>
+                                </select>
+                                <select v-model="ruleBuilder.operator" class="bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#0071e3] w-[80px]">
+                                    <option value=">">&gt;</option>
+                                    <option value="<">&lt;</option>
+                                    <option value="==">==</option>
+                                </select>
+                                <input v-model.number="ruleBuilder.threshold" type="number" class="bg-white border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-[#0071e3] w-[120px]">
+                                <button @click="generateRuleExpression" class="bg-[#0071e3] text-white px-4 py-2.5 rounded-lg text-sm font-semibold shadow-sm hover:bg-blue-600 transition">生成表达式</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">逻辑表达式 <span class="text-red-500">*</span></label>
+                            <input v-model="ruleForm.conditionExpression" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all font-mono" placeholder="点击上方按钮自动生成，或手工输入">
+                        </div>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">告警级别</label>
+                                <div class="flex items-center gap-4">
+                                    <label class="flex items-center gap-2 cursor-pointer border border-gray-200 rounded-xl px-4 py-3 bg-white hover:bg-gray-50 flex-1">
+                                        <input type="radio" value="warning" v-model="ruleForm.level" class="accent-[#0071e3]">
+                                        <span class="text-sm font-medium text-amber-600">警告 (Warning)</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer border border-gray-200 rounded-xl px-4 py-3 bg-white hover:bg-gray-50 flex-1">
+                                        <input type="radio" value="critical" v-model="ruleForm.level" class="accent-[#0071e3]">
+                                        <span class="text-sm font-medium text-red-600">紧急 (Critical)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">联动动作 <span class="text-red-500">*</span></label>
+                                <select v-model="ruleForm.actionType" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all">
+                                    <option value="MQTT">MQTT指令（控制硬件）</option>
+                                    <option value="WS_PUSH">WS推送（实时告警）</option>
+                                    <option value="WORKORDER">创建工单</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">响应参数 (JSON)</label>
+                            <textarea v-model="ruleForm.responseParams" rows="5" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all"></textarea>
+                        </div>
+                        <div class="pt-6 border-t border-gray-100 flex justify-end gap-3">
+                            <button @click="goOpsPage('RULE_LIST')" class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition">取消</button>
+                            <button @click="saveRule" class="bg-[#1d1d1f] hover:bg-black text-white rounded-full px-8 py-3 text-sm font-semibold shadow-md transition">保存规则</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="opsSubTab === 'FACE_ARCHIVE'" class="apple-card p-8">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-2xl font-semibold text-[#1d1d1f] flex items-center gap-2"><i data-lucide="users" class="w-6 h-6 text-[#0071e3]"></i>人员系统档案</h3>
+                        <button @click="openFaceModal" class="bg-[#0071e3] hover:bg-[#0077ED] text-white px-5 py-2.5 rounded-full text-sm font-semibold transition shadow-sm flex items-center gap-2">+ 新人员录入</button>
+                    </div>
+
+                    <div class="flex items-center gap-3 mb-6 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                        <input v-model="faceSearch" class="bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#0071e3] w-[240px]" placeholder="搜索姓名...">
+                        <select v-model="faceRoleFilter" class="bg-white border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-[#0071e3] w-[180px]">
+                            <option value="">全部身份</option>
+                            <option value="admin">管理员 (Admin)</option>
+                            <option value="staff">工作人员 (Staff)</option>
+                            <option value="visitor">访客 (Visitor)</option>
+                        </select>
+                        <button @click="loadFaces(1)" class="bg-[#1d1d1f] text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-black transition shadow-sm flex items-center gap-2"><i data-lucide="search" class="w-4 h-4"></i> 查询</button>
+                        <button @click="loadFaces(facePage)" class="w-9 h-9 rounded-full bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 flex items-center justify-center transition shadow-sm"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-100 rounded-[24px]">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead>
+                            <tr class="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold w-[220px]">ID</th>
+                                <th class="px-6 py-4 font-semibold">姓名 (Name)</th>
+                                <th class="px-6 py-4 font-semibold">系统角色 (Role)</th>
+                                <th class="px-6 py-4 font-semibold">附加信息 (Metadata)</th>
+                                <th class="px-6 py-4 font-semibold">注册时间</th>
+                                <th class="px-6 py-4 font-semibold w-[120px]">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody class="text-gray-800">
+                            <tr v-if="faceLoading">
+                                <td colspan="6" class="px-6 py-8 text-center text-gray-400 font-medium">数据加载中...</td>
+                            </tr>
+                            <tr v-for="face in faceList" :key="face.id" class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-4 font-mono text-xs text-gray-500">{{ face.id }}</td>
+                                <td class="px-6 py-4 font-semibold text-[#1d1d1f]">{{ face.name }}</td>
+                                <td class="px-6 py-4">
+                                    <span class="text-[11px] font-bold px-3 py-1 rounded-full border"
+                                          :class="face.role === 'staff' ? 'bg-blue-50 text-blue-600 border-blue-100' : (face.role === 'admin' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-gray-100 text-gray-600 border-gray-200')">
+                                        {{ face.role === 'staff' ? '工作人员' : (face.role === 'admin' ? 'Admin' : '普通访客') }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 font-mono text-xs text-gray-400 truncate max-w-[200px]" :title="JSON.stringify(face.metadata)">
+                                    {{ face.metadata && Object.keys(face.metadata).length ? JSON.stringify(face.metadata) : '--' }}
+                                </td>
+                                <td class="px-6 py-4 text-xs text-gray-500">{{ formatTime(face.createTime) }}</td>
+                                <td class="px-6 py-4">
+                                    <button @click="deleteFace(face)" class="text-red-500 hover:text-red-600 flex items-center gap-1 font-medium"><i data-lucide="trash-2" class="w-4 h-4"></i>删除</button>
+                                </td>
+                            </tr>
+                            <tr v-if="!faceLoading && faceList.length === 0">
+                                <td colspan="6" class="px-6 py-10 text-center text-gray-400 font-medium">暂无人员数据</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-6">
+                        <span class="text-sm font-medium text-gray-500">共查找到 {{ faceTotal }} 条记录</span>
+                        <div class="flex items-center gap-2">
+                            <button @click="facePage > 1 && loadFaces(facePage - 1)" class="w-8 h-8 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-50" :disabled="facePage <= 1"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                            <span class="text-sm font-semibold text-[#1d1d1f] px-2">{{ facePage }} / {{ totalFacePages }}</span>
+                            <button @click="facePage < totalFacePages && loadFaces(facePage + 1)" class="w-8 h-8 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-50" :disabled="facePage >= totalFacePages"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="opsSubTab === 'DEVICE_REGISTER'" class="apple-card p-10 max-w-3xl mx-auto">
+                    <div class="mb-8 border-b border-gray-100 pb-4">
+                        <h3 class="text-2xl font-semibold text-[#1d1d1f]">新设备资产入库</h3>
+                        <p class="text-sm text-gray-500 mt-1">将新的硬件节点注册至数字孪生中枢</p>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-6">
+                            <label class="w-24 text-right text-sm font-semibold text-gray-700 shrink-0">设备 ID <span class="text-red-500">*</span></label>
+                            <input v-model="deviceRegisterForm.deviceId" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all" placeholder="例：M-GW-001">
+                        </div>
+                        <div class="flex items-center gap-6">
+                            <label class="w-24 text-right text-sm font-semibold text-gray-700 shrink-0">设备名称 <span class="text-red-500">*</span></label>
+                            <input v-model="deviceRegisterForm.name" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all" placeholder="请输入直观的设备名称">
+                        </div>
+                        <div class="flex items-center gap-6">
+                            <label class="w-24 text-right text-sm font-semibold text-gray-700 shrink-0">部署展厅</label>
+                            <input v-model="deviceRegisterForm.region" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all" placeholder="例如：A区 / B区">
+                        </div>
+                        <div class="flex items-center gap-6">
+                            <label class="w-24 text-right text-sm font-semibold text-gray-700 shrink-0">部署位置</label>
+                            <input v-model="deviceRegisterForm.location" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:bg-white focus:border-[#0071e3] transition-all" placeholder="例如：一层大厅东侧展柜">
+                        </div>
+                        <div class="pt-6 border-t border-gray-100 flex justify-end gap-3 mt-8">
+                            <button @click="deviceRegisterForm.deviceId='';deviceRegisterForm.name='';deviceRegisterForm.region='';deviceRegisterForm.location=''" class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition">清空表单</button>
+                            <button @click="submitDeviceRegister" class="bg-[#1d1d1f] hover:bg-black text-white rounded-full px-8 py-3 text-sm font-semibold shadow-md transition">立即注册绑定</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="opsSubTab === 'DEVICE_LEDGER'" class="apple-card p-8">
+                    <div class="flex items-center justify-between mb-8">
+                        <h3 class="text-2xl font-semibold text-[#1d1d1f] flex items-center gap-2"><i data-lucide="monitor" class="w-6 h-6 text-[#0071e3]"></i>全馆资产台账</h3>
+                        <div class="flex items-center gap-3 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                            <select v-model="ledgerStatusFilter" class="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#0071e3] w-[120px]">
+                                <option value="ALL">全部状态</option>
+                                <option value="ONLINE">仅在线</option>
+                                <option value="OFFLINE">仅离线</option>
+                            </select>
+                            <button @click="fetchAllData" class="text-sm font-semibold px-4 py-1.5 bg-[#1d1d1f] text-white rounded-lg hover:bg-black transition">查询</button>
+                            <button @click="goOpsPage('DEVICE_REGISTER')" class="text-sm font-semibold px-4 py-1.5 bg-[#0071e3] text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-1.5"><i data-lucide="plus" class="w-4 h-4"></i>入库</button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-100 rounded-[24px]">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead>
+                            <tr class="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wider">
+                                <th class="px-6 py-4 font-semibold">设备 ID</th>
+                                <th class="px-6 py-4 font-semibold">名称</th>
+                                <th class="px-6 py-4 font-semibold">部署区/位置</th>
+                                <th class="px-6 py-4 font-semibold">通讯状态</th>
+                                <th class="px-6 py-4 font-semibold">心跳更新时间</th>
+                                <th class="px-6 py-4 font-semibold">安防布防</th>
+                                <th class="px-6 py-4 font-semibold">操作</th>
+                            </tr>
+                            </thead>
+                            <tbody class="text-gray-800">
+                            <tr v-for="dev in filteredLedgerDevices" :key="dev.deviceId || dev.device_id" class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-4"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded font-mono text-xs border border-gray-200">{{ dev.deviceId || dev.device_id }}</span></td>
+                                <td class="px-6 py-4 font-semibold text-[#1d1d1f]">{{ dev.name || '--' }}</td>
+                                <td class="px-6 py-4 text-gray-500 text-xs">
+                                    <span class="font-bold text-[#0071e3]">{{ dev.region || '--' }}</span> <br/> {{ dev.location || '--' }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center gap-2 text-xs font-bold px-2.5 py-1 rounded-full border"
+                                          :class="(dev.status === 1 || dev.status === '1' || dev.status === '在线') ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-100 text-gray-500 border-gray-200'">
+                                        <span class="w-1.5 h-1.5 rounded-full" :class="(dev.status === 1 || dev.status === '1' || dev.status === '在线') ? 'bg-green-500' : 'bg-gray-400'"></span>
+                                        {{ (dev.status === 1 || dev.status === '1' || dev.status === '在线') ? 'ONLINE' : 'OFFLINE' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-xs text-gray-500 font-mono">{{ formatTime(dev.lastHeartbeat || dev.last_heartbeat || dev.update_time || dev.updateTime) }}</td>
+                                <td class="px-6 py-4">
+                                    <label class="ios-switch scale-75 origin-left">
+                                        <input type="checkbox" :checked="dev.armStatus === 1 || dev.arm_status === 1" @change="handleArm(dev)">
+                                        <span class="slider"></span>
+                                    </label>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button @click="openDeviceEdit(dev)" class="text-[#0071e3] hover:underline font-medium mr-4">修改</button>
+                                    <button @click="removeDevice(dev)" class="text-red-500 hover:underline font-medium">注销</button>
+                                </td>
+                            </tr>
+                            <tr v-if="filteredLedgerDevices.length === 0">
+                                <td colspan="7" class="px-6 py-10 text-center text-gray-400 font-medium">台账内暂无符合条件的设备记录</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div v-if="showFaceModal" class="fixed inset-0 z-[1200] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 transition-all">
+                    <div class="w-[500px] apple-card overflow-hidden shadow-2xl animate-fade-in">
+                        <div class="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-white">
+                            <h4 class="text-xl font-semibold text-[#1d1d1f]">新人员档案录入</h4>
+                            <button @click="showFaceModal=false" class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
+                        <div class="p-8 space-y-5 bg-gray-50/30">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">真实姓名 <span class="text-red-500">*</span></label>
+                                <input v-model="faceRegisterForm.name" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0071e3] transition-shadow shadow-sm" placeholder="请输入系统登记名">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">授权角色 <span class="text-red-500">*</span></label>
+                                <select v-model="faceRegisterForm.role" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0071e3] transition-shadow shadow-sm">
+                                    <option value="admin">系统管理员 (Admin)</option>
+                                    <option value="staff">工作人员 (Staff)</option>
+                                    <option value="visitor">外部访客 (Visitor)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">附加属性 (Metadata JSON)</label>
+                                <textarea v-model="faceRegisterForm.metadataStr" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:border-[#0071e3] transition-shadow shadow-sm" rows="2" placeholder='例如：{"dept": "安保巡逻"}'></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">生物特征 (人脸照片)</label>
+                                <input type="file" accept="image/*" @change="onFaceFileChange" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 shadow-sm cursor-pointer">
+                                <div v-if="faceRegisterForm.imageBase64" class="mt-3 p-1 bg-white border border-gray-200 rounded-xl inline-block shadow-sm">
+                                    <img :src="faceRegisterForm.imageBase64" class="w-24 h-24 object-cover rounded-lg">
+                                </div>
+                            </div>
+                            <div class="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
+                                <button @click="showFaceModal=false" class="px-6 py-2.5 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition">取消</button>
+                                <button @click="submitFaceRegister" class="px-6 py-2.5 rounded-full bg-[#1d1d1f] hover:bg-black text-sm font-semibold text-white shadow-md transition">立即提交入库</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="editingDevice" class="fixed inset-0 z-[1200] bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 transition-all">
+                    <div class="w-[500px] apple-card overflow-hidden shadow-2xl animate-fade-in">
+                        <div class="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-white">
+                            <h4 class="text-xl font-semibold text-[#1d1d1f]">修改资产信息</h4>
+                            <button @click="closeDeviceEdit" class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        </div>
+                        <div class="p-8 space-y-5 bg-gray-50/30">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">设备名称</label>
+                                <input v-model="deviceEditForm.name" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0071e3] transition-shadow shadow-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">部署展区</label>
+                                <input v-model="deviceEditForm.region" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0071e3] transition-shadow shadow-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">详细位置</label>
+                                <input v-model="deviceEditForm.location" class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0071e3] transition-shadow shadow-sm">
+                            </div>
+                            <div class="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
+                                <button @click="closeDeviceEdit" class="px-6 py-2.5 rounded-full bg-white border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition">取消</button>
+                                <button @click="saveDeviceEdit" class="px-6 py-2.5 rounded-full bg-[#0071e3] hover:bg-blue-600 text-sm font-semibold text-white shadow-md transition">保存更改</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div v-if="activeTab === 'AI'" class="max-w-3xl mx-auto px-8 pt-12 pb-24 h-[calc(100vh-60px)] flex flex-col animate-fade-in">
+                <div class="text-center mb-8">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-[#0071e3] to-[#42a1ff] rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4">
+                        <i data-lucide="bot" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <h2 class="text-2xl font-semibold">Nexus 助理</h2>
+                    <p class="text-xs text-gray-500 mt-1">全局语音中枢已开启，您可以直接对我下达指令</p>
+                </div>
+
+                <div class="flex-1 overflow-y-auto no-scrollbar space-y-4 px-4 pb-4" id="chat-box">
+                    <div v-for="m in messages" :key="m.id" :class="['flex w-full', m.role === 'user' ? 'justify-end' : 'justify-start']">
+                        <div :class="['px-5 py-3 max-w-[75%] text-[15px] leading-relaxed whitespace-pre-wrap',
+                            m.role === 'user' ? 'bg-[#0071e3] text-white rounded-2xl rounded-br-sm shadow-sm' : 'bg-white border border-gray-100 text-black rounded-2xl rounded-bl-sm shadow-sm']">
+                            {{m.text}}
+                            <div v-if="m.loading" class="mt-1 flex gap-1 items-center h-4">
+                                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
+                                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0.1s"></span>
+                                <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay:0.2s"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 relative flex gap-3">
+                    <input v-model="userInput" @keyup.enter="sendChat" :placeholder="isRecording ? '正在聆听您的指令...' : '输入文字指令，或点击右侧麦克风说话'"
+                           :class="isRecording ? 'border-red-400 bg-red-50' : 'border-gray-200 bg-white'"
+                           class="flex-1 border rounded-full pl-6 pr-[6.5rem] py-3.5 text-[15px] focus:outline-none focus:border-[#0071e3] shadow-sm transition-all">
+
+                    <div class="absolute right-2 top-1.5 flex gap-1.5">
+                        <button @click="startVoiceChat" :class="isRecording ? 'bg-red-500 text-white animate-pulse shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'" class="w-10 h-10 rounded-full flex items-center justify-center transition-all">
+                            <i data-lucide="mic" class="w-4 h-4"></i>
+                        </button>
+                        <button @click="sendChat" class="w-10 h-10 bg-[#0071e3] text-white rounded-full flex items-center justify-center hover:bg-[#0077ED] transition-colors shadow-sm">
+                            <i data-lucide="arrow-up" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div v-if="isRecording" class="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-1 h-6">
+                        <div class="wave-bar" style="animation-delay: 0.1s;"></div>
+                        <div class="wave-bar" style="animation-delay: 0.3s;"></div>
+                        <div class="wave-bar" style="animation-delay: 0.5s;"></div>
+                        <div class="wave-bar" style="animation-delay: 0.2s;"></div>
+                        <div class="text-xs text-red-500 font-bold ml-2">录音中...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <canvas id="hidden-canvas" width="640" height="640" style="display: none;"></canvas>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
+    const API_BASE = "http://localhost:8080";
+
+    createApp({
+        setup() {
+            const isLoggedIn = ref(false);
+            const authMode = ref('LOGIN');
+            const authLoading = ref(false);
+            const authForm = reactive({ name: '', role: 'visitor' });
+            const currentUser = ref(null);
+
+            const activeTab = ref('DEVICE');
+            const activeSubTab = ref('OVERVIEW');
+            const selectedRegion = ref('ALL');
+            const opsSubTab = ref('OVERVIEW');
+
+            const menus = ref([
+                {
+                    id: 'DEVICE', name: '设备管控', hasSub: true,
+                    subs: [{id: 'ALL', name: '全部区域'}, {id: 'A区', name: 'A区设备'}, {id: 'B区', name: 'B区设备'}]
+                },
+                { id: 'DASH', name: '环境监控', hasSub: false },
+                { id: 'VISION', name: '视觉神经', hasSub: false },
+                {
+                    id: 'ALARM', name: '事件与工单', hasSub: true,
+                    subs: [
+                        {id: 'OVERVIEW', name: '总览看板'},
+                        {id: 'ALARM_LIST', name: '异常告警'},
+                        {id: 'ACCESS_LOG', name: '通行日志'},
+                        {id: 'WORK_ORDER', name: '维保工单'}
+                    ]
+                },
+                {
+                    id: 'OPS', name: '综合管理', hasSub: true,
+                    subs: [
+                        { id: 'OVERVIEW', name: '数据概览' },
+                        { id: 'RULE_LIST', name: '策略列表' },
+                        { id: 'DEVICE_LEDGER', name: '设备台账' }
+                    ]
+                },
+                { id: 'AI', name: '智能助理', hasSub: false }
+            ]);
+
+            const formatTime = (timeStr) => {
+                if (!timeStr) return '--:--:--';
+                try {
+                    let str = timeStr.replace('T', ' ');
+                    if (str.indexOf('.') > -1) str = str.substring(0, str.indexOf('.'));
+                    return str;
+                } catch(e) { return timeStr; }
+            };
+
+            const alarmTitle = computed(() => {
+                if (activeSubTab.value === 'OVERVIEW') return '事件与工单总览';
+                if (activeSubTab.value === 'ALARM_LIST') return '异常告警记录';
+                if (activeSubTab.value === 'ACCESS_LOG') return '通行历史档案';
+                if (activeSubTab.value === 'WORK_ORDER') return '设施维保工单';
+                return '事件与工单';
+            });
+
+            const selectMenu = (mainId) => {
+                activeTab.value = mainId;
+                if (mainId === 'DEVICE') selectedRegion.value = 'ALL';
+                if (mainId === 'ALARM') activeSubTab.value = 'OVERVIEW';
+                if (mainId === 'OPS') opsSubTab.value = 'OVERVIEW';
+                fetchAllData();
+            };
+
+            const selectSubMenu = (mainId, subId) => {
+                activeTab.value = mainId;
+                if (mainId === 'DEVICE') selectedRegion.value = subId;
+                if (mainId === 'ALARM') activeSubTab.value = subId;
+                if (mainId === 'OPS') opsSubTab.value = subId;
+                fetchAllData();
+            };
+
+            const openPersonnel = () => {
+                activeTab.value = 'OPS';
+                opsSubTab.value = 'FACE_ARCHIVE';
+                fetchAllData();
+            };
+
+            const toast = reactive({ show: false, message: '', type: 'success', icon: 'check-circle', color: 'text-green-600' });
+            const showToast = (msg, type='success', icon='info') => {
+                toast.message = msg; toast.type = type; toast.icon = type==='success'?'check-circle':(type==='error'?'x-circle':icon);
+                toast.color = type==='success'?'text-green-600':(type==='error'?'text-red-500':'text-blue-500');
+                toast.show = true;
+                setTimeout(() => toast.show = false, 3000);
+            };
+
+            const deviceList = ref([]);
+            const alarms = ref([]);
+            const workOrders = ref([]);
+            const accessLogs = ref([]);
+            const sensorStats = reactive([
+                { label: '温度', value: '--', unit: '℃', icon: 'thermometer' },
+                { label: '湿度', value: '--', unit: '%', icon: 'droplets' },
+                { label: '光照', value: '--', unit: 'lx', icon: 'sun' },
+                { label: '烟雾', value: '--', unit: 'ppm', icon: 'cloud' }
+            ]);
+            const mgmtNow = ref(new Date());
+            let mgmtTimer = null;
+
+            const overviewStats = reactive({
+                todayAlarms: 0,
+                onlineDevices: 0,
+                pendingWorkorders: 0,
+                faceCount: 0
+            });
+
+            const showRuleForm = ref(false);
+            const rules = ref([]);
+            const rulesLoading = ref(false);
+            const editingRuleId = ref(null);
+            const ruleForm = reactive({
+                name: '',
+                conditionExpression: '',
+                level: 'warning',
+                actionType: 'MQTT',
+                responseParams: '{}',
+                enabled: true
+            });
+            const ruleBuilder = reactive({
+                sensor: 'smoke',
+                operator: '>',
+                threshold: 100
+            });
+
+            const faceSearch = ref('');
+            const faceRoleFilter = ref('');
+            const faceList = ref([]);
+            const facePage = ref(1);
+            const faceSize = ref(8);
+            const faceTotal = ref(0);
+            const faceLoading = ref(false);
+            const showFaceModal = ref(false);
+            const faceRegisterForm = reactive({
+                name: '',
+                role: 'visitor',
+                metadataStr: '{}',
+                imageBase64: ''
+            });
+
+            const showDeviceRegister = ref(false);
+            const deviceRegisterForm = reactive({
+                deviceId: '',
+                name: '',
+                region: '',
+                location: ''
+            });
+
+            const ledgerStatusFilter = ref('ALL');
+            const editingDevice = ref(null);
+            const deviceEditForm = reactive({
+                name: '',
+                region: '',
+                location: ''
+            });
+
+            const filteredDevices = computed(() => {
+                if (selectedRegion.value === 'ALL') return deviceList.value;
+                return deviceList.value.filter(d => {
+                    const reg = String(d.region || '').toUpperCase();
+                    const targetVal = selectedRegion.value.replace('区', '').toUpperCase();
+                    return reg.includes(targetVal) || reg.includes(selectedRegion.value);
+                });
+            });
+
+            const formatManagementTime = (d) => {
+                if (!d) return '--';
+                const date = new Date(d);
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const h = String(date.getHours()).padStart(2, '0');
+                const mi = String(date.getMinutes()).padStart(2, '0');
+                const s = String(date.getSeconds()).padStart(2, '0');
+                return `${y}/${m}/${day} ${h}:${mi}:${s}`;
+            };
+
+            const opsPageTitle = computed(() => {
+                if (opsSubTab.value === 'OVERVIEW') return '数据管控中心';
+                if (opsSubTab.value === 'RULE_LIST') return '策略配置中心';
+                if (opsSubTab.value === 'RULE_FORM') return editingRuleId.value ? '编辑联动策略' : '新建联动策略';
+                if (opsSubTab.value === 'FACE_ARCHIVE') return '生物识别与档案管理';
+                if (opsSubTab.value === 'DEVICE_REGISTER') return '新硬件节点注册入网';
+                if (opsSubTab.value === 'DEVICE_LEDGER') return '数字资产台账管理';
+                return '综合管理';
+            });
+
+            const overviewAlarmFeed = computed(() => alarms.value.slice(0, 20));
+
+            const totalFacePages = computed(() => {
+                const pages = Math.ceil((faceTotal.value || 0) / (faceSize.value || 8));
+                return pages > 0 ? pages : 1;
+            });
+
+            const filteredLedgerDevices = computed(() => {
+                if (ledgerStatusFilter.value === 'ALL') return deviceList.value;
+                return deviceList.value.filter(d => {
+                    const isOnline = d.status === 1 || d.status === '1' || d.status === '在线';
+                    return ledgerStatusFilter.value === 'ONLINE' ? isOnline : !isOnline;
+                });
+            });
+
+            const selectedDevice = ref(null);
+            const isPatrolling = ref(false);
+            const patrolIndex = ref(0);
+            let patrolTimer = null;
+
+            const isForceFieldActive = ref(true);
+            const isSimulating = ref(false);
+
+            const aDevices = computed(() => deviceList.value.filter(d => {
+                const reg = String(d.region || '').toUpperCase();
+                return reg.includes('A');
+            }));
+
+            const bDevices = computed(() => deviceList.value.filter(d => {
+                const reg = String(d.region || '').toUpperCase();
+                return reg.includes('B');
+            }));
+
+            const worldTransform = computed(() => {
+                if (selectedRegion.value.includes('A')) return 'rotateX(55deg) rotateZ(-20deg) scale(1.15) translateX(15%) translateZ(-40px)';
+                if (selectedRegion.value.includes('B')) return 'rotateX(55deg) rotateZ(-50deg) scale(1.15) translateX(-15%) translateZ(40px)';
+                return 'rotateX(60deg) rotateZ(-35deg) scale(1)';
+            });
+
+            const standUpTransform = computed(() => {
+                if (selectedRegion.value.includes('A')) return 'rotateZ(20deg) rotateX(-55deg) translateY(-25px)';
+                if (selectedRegion.value.includes('B')) return 'rotateZ(50deg) rotateX(-55deg) translateY(-25px)';
+                return 'rotateZ(35deg) rotateX(-60deg) translateY(-25px)';
+            });
+
+            const getDeviceLocalStyle = (index) => {
+                const pts = [
+                    { top: '25%', left: '25%' }, { top: '25%', left: '75%' },
+                    { top: '75%', left: '25%' }, { top: '75%', left: '75%' },
+                    { top: '50%', left: '50%' }
+                ];
+                return pts[index % pts.length];
+            };
+
+            const getDotStatus = (d) => {
+                if (!d) return 'OFFLINE';
+                if (d.buzzerStatus === 1 || d.buzzer_status === 1) return 'ALARM';
+                if (d.status === 1 || d.status === '在线' || d.status === '1') return 'ONLINE';
+                return 'OFFLINE';
+            };
+
+            const getDotColorClass = (d) => {
+                const s = getDotStatus(d);
+                if (s === 'ALARM') return 'bg-red-500 shadow-[0_0_15px_rgba(255,59,48,0.8)]';
+                if (s === 'ONLINE') return 'bg-[#0071e3] shadow-[0_0_15px_rgba(0,113,227,0.8)]';
+                return 'bg-gray-400 border-gray-300';
+            };
+
+            const openDevicePanel = (device) => { selectedDevice.value = device; };
+
+            const toggleForceField = () => {
+                isForceFieldActive.value = !isForceFieldActive.value;
+                speakText(isForceFieldActive.value ? "已为您开启文物微环境力场。" : "力场已关闭。");
+                showToast(isForceFieldActive.value ? "力场防御已开启" : "力场已关闭", "info");
+            };
+
+            const runCrossValidationDemo = () => {
+                if (filteredDevices.value.length === 0) return showToast("当前区域无设备", "error");
+                if (isPatrolling.value) stopPatrol();
+
+                isForceFieldActive.value = true;
+                isSimulating.value = true;
+                const target = filteredDevices.value[0];
+                openDevicePanel(target);
+
+                speakText(`警告，检测到 ${target.name} 烟雾浓度异常。正在启动跨模态侦测，调取热像仪比对...`);
+
+                setTimeout(() => {
+                    isSimulating.value = false;
+                    speakText(`比对完成。温度正常，未发现异常热源。判定为灰尘干扰，警报已自动过滤。`);
+                    showToast("误报已过滤，系统恢复正常", "success");
+                }, 7500);
+            };
+
+            const togglePatrol = () => {
+                if (isPatrolling.value) {
+                    stopPatrol();
+                    speakText("已为您终止云巡检任务");
+                } else {
+                    startPatrol();
+                }
+            };
+
+            const startPatrol = () => {
+                isSimulating.value = false;
+                isPatrolling.value = true;
+                patrolIndex.value = 0;
+                speakText("已为您启动沉浸式云巡检。");
+
+                const total = filteredDevices.value.length;
+                if (total === 0) { stopPatrol(); return; }
+                patrolStep();
+
+                patrolTimer = setInterval(() => {
+                    patrolIndex.value++;
+                    if (patrolIndex.value >= total) {
+                        stopPatrol();
+                        speakText("全馆云巡检已完成，未发现异常情况。");
+                    } else {
+                        patrolStep();
+                    }
+                }, 4000);
+            };
+
+            const patrolStep = () => {
+                const dev = filteredDevices.value[patrolIndex.value];
+                openDevicePanel(dev);
+                if (patrolIndex.value === 0) {
+                    speakText(`正在巡检 ${dev.name}。`);
+                } else if (getDotStatus(dev) === 'ALARM') {
+                    speakText(`警告，${dev.name} 存在异常告警。`);
+                }
+            };
+
+            const stopPatrol = () => {
+                isPatrolling.value = false;
+                clearInterval(patrolTimer);
+                patrolTimer = null;
+                if(!isSimulating.value) selectedDevice.value = null;
+            };
+
+            const visionMode = ref('FACE');
+            const isCameraOn = ref(false);
+            const secIdentity = ref("Unknown");
+            const visionResult = reactive({ status: 'normal', detections: [] });
+            const behaviorResult = reactive({ status: 'normal', behavior: '正常', confidence: 0, className: '', topK: [] });
+            let visionTick = 0;
+
+            const securityHasAlert = computed(() => {
+                return visionResult.status !== 'normal' || behaviorResult.status === 'danger';
+            });
+            const securityAlertSummary = computed(() => {
+                const parts = [];
+                if (visionResult.status === 'fire_and_smoke') parts.push('发现火焰与烟雾');
+                else if (visionResult.status === 'fire') parts.push('发现明火');
+                else if (visionResult.status === 'smoke') parts.push('发现烟雾');
+                if (behaviorResult.status === 'danger') parts.push(`检测到${behaviorResult.behavior}`);
+                return parts.join('，') || '环境安全';
+            });
+
+            const setVisionMode = (mode) => {
+                visionMode.value = mode;
+                clearCanvas();
+                visionResult.status = 'normal';
+                visionResult.detections = [];
+                secIdentity.value = "Unknown";
+                behaviorResult.status = 'normal';
+                behaviorResult.behavior = '正常';
+            };
+
+            const toggleVision = async (isOn) => {
+                if(isOn) {
+                    try {
+                        const s = await navigator.mediaDevices.getUserMedia({ video: true });
+                        document.getElementById('secVideo').srcObject = s;
+
+                        window.visionTimer = setInterval(async () => {
+                            if(!isCameraOn.value) return;
+                            tickVisionProcess();
+                        }, 500);
+                    } catch(e) { showToast("摄像头无法启动", "error"); isCameraOn.value = false; }
+                } else {
+                    clearInterval(window.visionTimer);
+                    const v = document.getElementById('secVideo');
+                    if(v && v.srcObject) v.srcObject.getTracks().forEach(t=>t.stop());
+                    clearCanvas();
+                    visionResult.status = 'normal';
+                    visionResult.detections = [];
+                    secIdentity.value = "Unknown";
+                    behaviorResult.status = 'normal';
+                    behaviorResult.behavior = '正常';
+                }
+            };
+
+            const tickVisionProcess = () => {
+                visionTick++;
+                const v = document.getElementById('secVideo');
+                const c = document.getElementById('hidden-canvas');
+                if(!v || !c) return;
+
+                if (visionMode.value === 'FACE') {
+                    if (visionTick % 5 !== 0) return;
+                    const base64 = captureBase64('secVideo');
+                    if(!base64) return;
+
+                    fetch(`${API_BASE}/api/face-rec/login`, {
+                        method: 'POST', headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ imageBase64: base64 })
+                    }).then(r=>r.json()).then(d => {
+                        if(d.success && d.user) {
+                            secIdentity.value = d.user.name;
+                        } else { secIdentity.value = "Unknown"; }
+                    }).catch(()=>{});
+                }
+                else if (visionMode.value === 'FIRE') {
+                    c.getContext('2d').drawImage(v, 0, 0, 640, 640);
+                    c.toBlob(async (blob) => {
+                        const formData = new FormData();
+                        formData.append('image', blob, 'frame.jpg');
+
+                        try {
+                            const res = await fetch(`${API_BASE}/api/vision/fire-monitor`, {
+                                method: 'POST', body: formData
+                            }).then(r => r.json());
+
+                            if(res.code === 200 || res.status) {
+                                visionResult.status = res.status;
+                                visionResult.detections = res.detections || [];
+                                drawBoxes(visionResult.detections);
+                            }
+                        } catch(e) {}
+                    }, 'image/jpeg', 0.8);
+                }
+                else if (visionMode.value === 'BEHAVIOR') {
+                    c.getContext('2d').drawImage(v, 0, 0, 640, 640);
+                    c.toBlob(async (blob) => {
+                        const formData = new FormData();
+                        formData.append('image', blob, 'frame.jpg');
+
+                        try {
+                            const res = await fetch(`${API_BASE}/api/vision/behavior-monitor`, {
+                                method: 'POST', body: formData
+                            }).then(r => r.json());
+
+                            if(res.code === 200 || res.status) {
+                                behaviorResult.status = res.status;
+                                behaviorResult.behavior = res.behavior || '正常';
+                                behaviorResult.confidence = res.confidence || 0;
+                                behaviorResult.className = res.className || '';
+                                behaviorResult.topK = res.topK || [];
+                            }
+                        } catch(e) {}
+                    }, 'image/jpeg', 0.8);
+                }
+                else if (visionMode.value === 'SECURITY') {
+                    c.getContext('2d').drawImage(v, 0, 0, 640, 640);
+                    c.toBlob(async (blob) => {
+                        const fireForm = new FormData(); fireForm.append('image', blob, 'frame.jpg');
+                        const behaviorForm = new FormData(); behaviorForm.append('image', blob, 'frame.jpg');
+
+                        const [fireRes, behaviorRes] = await Promise.allSettled([
+                            fetch(`${API_BASE}/api/vision/fire-monitor`, { method: 'POST', body: fireForm }).then(r => r.json()),
+                            fetch(`${API_BASE}/api/vision/behavior-monitor`, { method: 'POST', body: behaviorForm }).then(r => r.json())
+                        ]);
+
+                        if (fireRes.status === 'fulfilled' && (fireRes.value.code === 200 || fireRes.value.status)) {
+                            visionResult.status = fireRes.value.status;
+                            visionResult.detections = fireRes.value.detections || [];
+                            drawBoxes(visionResult.detections);
+                        }
+                        if (behaviorRes.status === 'fulfilled' && (behaviorRes.value.code === 200 || behaviorRes.value.status)) {
+                            behaviorResult.status = behaviorRes.value.status;
+                            behaviorResult.behavior = behaviorRes.value.behavior || '正常';
+                            behaviorResult.confidence = behaviorRes.value.confidence || 0;
+                            behaviorResult.className = behaviorRes.value.className || '';
+                            behaviorResult.topK = behaviorRes.value.topK || [];
+                        }
+                    }, 'image/jpeg', 0.8);
+                }
+            };
+
+            const drawBoxes = (detections) => {
+                const canvas = document.getElementById('ai-canvas');
+                const video = document.getElementById('secVideo');
+                if (!canvas || !video) return;
+
+                const ctx = canvas.getContext('2d');
+                canvas.width = video.clientWidth;
+                canvas.height = video.clientHeight;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (!detections || detections.length === 0) return;
+
+                detections.forEach(det => {
+                    const [x1, y1, x2, y2] = det.bbox;
+                    const isFire = det.class === 0 || det.name === 'fire';
+                    const color = isFire ? '#ff3b30' : '#ffcc00';
+
+                    const drawX = canvas.width - (canvas.width * (x2 / 640));
+                    const drawY = canvas.height * (y1 / 640);
+                    const drawW = canvas.width * ((x2 - x1) / 640);
+                    const drawH = canvas.height * ((y2 - y1) / 640);
+
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = color;
+                    ctx.strokeRect(drawX, drawY, drawW, drawH);
+
+                    ctx.fillStyle = isFire ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255, 204, 0, 0.15)';
+                    ctx.fillRect(drawX, drawY, drawW, drawH);
+
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = color;
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText(`${det.name.toUpperCase()} ${(det.confidence * 100).toFixed(0)}%`, drawX + 5, drawY - 8);
+                });
+            };
+
+            const clearCanvas = () => {
+                const canvas = document.getElementById('ai-canvas');
+                if(canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            };
+
+            const userInput = ref("");
+            const messages = reactive([{ id: 1, role: 'ai', text: '您好，这里是 Nexus 语音交互中枢。您可以随时对我下达指令。' }]);
+            const chartField = ref('temperature');
+            let myChart = null;
+            let globalDataInterval = null;
+
+            const isRecording = ref(false);
+            const isGlobalListening = ref(false);
+            let recognition = null;
+
+            const initGlobalVoice = () => {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) return;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'zh-CN';
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.onresult = (event) => {
+                    const text = event.results[event.results.length - 1][0].transcript.trim();
+                    if(text) processVoiceCommand(text);
+                };
+                recognition.onend = () => {
+                    if (isLoggedIn.value && isGlobalListening.value) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                };
+            };
+
+            const toggleGlobalVoice = () => {
+                if(!recognition) initGlobalVoice();
+                if(isGlobalListening.value) {
+                    isGlobalListening.value = false;
+                    recognition.stop();
+                    showToast("语音唤醒已休眠", "info", "mic-off");
+                } else {
+                    isGlobalListening.value = true;
+                    try { recognition.start(); } catch(e){}
+                    showToast("全局语音监听已开启", "success", "mic");
+                }
+            };
+
+            const startVoiceChat = () => {
+                if (!recognition) return showToast("您的浏览器不支持语音", "error");
+                if (isRecording.value) { recognition.stop(); return; }
+                try {
+                    recognition.start();
+                    isRecording.value = true;
+                    showToast("麦克风已开启，请说话...", "success");
+                    recognition.onresult = (event) => {
+                        userInput.value = event.results[0][0].transcript;
+                        sendChat();
+                    };
+                    recognition.onend = () => { isRecording.value = false; };
+                    recognition.onerror = () => { isRecording.value = false; };
+                } catch(e) { isRecording.value = false; }
+            };
+
+            const speakText = (text) => {
+                if (!window.speechSynthesis) return;
+                window.speechSynthesis.cancel();
+
+                let spokenText = text.replace(/[*#>`~_]/g, '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').replace(/-\s/g, '').replace(/[\r\n]+/g, '，');
+                if (spokenText.length > 120) {
+                    spokenText = spokenText.substring(0, 120) + "......长官，更多详细数据已显示在大屏幕上。";
+                }
+
+                const utterance = new SpeechSynthesisUtterance(spokenText);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 1.1;
+                utterance.pitch = 1.0;
+
+                const voices = window.speechSynthesis.getVoices();
+                if (voices.length > 0) {
+                    const bestVoice = voices.find(v => v.name.includes('Xiaoxiao') || v.name.includes('Ting-Ting') || v.name.includes('Google 普通话')) || voices.find(v => v.lang === 'zh-CN');
+                    if (bestVoice) utterance.voice = bestVoice;
+                }
+
+                window.speechSynthesis.speak(utterance);
+            };
+
+            const processVoiceCommand = (text) => {
+                showToast(`🗣️ 收到指令: "${text}"`, "info", "mic");
+                let handled = false;
+
+                if (text.includes("汇报") || text.includes("简报") || text.includes("情况")) {
+                    selectMenu('DASH');
+                    handled = true;
+                    const totalDev = deviceList.value.length || 0;
+                    const onlineDev = deviceList.value.filter(d => d.status === 1 || d.status === '在线' || d.status === '1').length || 0;
+                    const alarmCount = alarms.value.length || 0;
+                    const temp = sensorStats[0].value || '--';
+                    const hum = sensorStats[1].value || '--';
+                    let report = `长官，早上好。当前系统接入 ${totalDev} 台设备，其中 ${onlineDev} 台运行正常。`;
+                    if (alarmCount === 0) report += `未发生入侵事件，系统零告警。`;
+                    else report += `共有 ${alarmCount} 条未处理异常，请您留意。`;
+                    report += `全馆平均温度为 ${temp}摄氏度，湿度为百分之${hum}，指标曲线平稳。今天需要为您做些什么？`;
+
+                    messages.push({ id: Date.now(), role: 'user', text: text });
+                    messages.push({ id: Date.now()+1, role: 'ai', text: report });
+                    if(activeTab.value === 'AI') nextTick(() => document.getElementById('chat-box').scrollTop = 9999);
+                    speakText(report);
+                    return;
+                }
+
+                if (text.includes("力场") || text.includes("防御")) {
+                    selectMenu('DEVICE'); toggleForceField(); handled = true;
+                }
+                else if (text.includes("模拟") || text.includes("测试") || text.includes("误报")) {
+                    selectMenu('DEVICE'); runCrossValidationDemo(); handled = true;
+                }
+                else if (text.includes("巡检") || text.includes("巡逻")) {
+                    if (text.includes("开启") || text.includes("启动") || text.includes("开始")) {
+                        selectMenu('DEVICE'); startPatrol(); handled = true;
+                    } else if (text.includes("停止") || text.includes("关闭") || text.includes("结束")) {
+                        stopPatrol(); speakText("已为您终止云巡检任务"); handled = true;
+                    }
+                }
+                else if (text.includes("监控") || text.includes("环境")) { selectMenu('DASH'); handled = true; speakText("已为您切换至环境监控"); }
+                else if (text.includes("设备") || text.includes("主页")) { selectMenu('DEVICE'); handled = true; speakText("已为您打开设备孪生矩阵"); }
+                else if (text.includes("告警") || text.includes("工单")) { selectMenu('ALARM'); handled = true; speakText("正在查阅事件与工单"); }
+                else if (text.includes("开") && (text.includes("灯") || text.includes("照明"))) {
+                    let targets = deviceList.value;
+                    if (text.includes("A区") || text.includes("a区")) targets = targets.filter(d => d.region === 'A区');
+                    if (text.includes("B区") || text.includes("b区")) targets = targets.filter(d => d.region === 'B区');
+                    targets.forEach(d => handleHardware(d.deviceId||d.device_id, 'led', 0));
+                    speakText(`好的，已向${text.includes("A区")?'A区':(text.includes("B区")?'B区':'所有')}设备发送开启指令`); handled = true;
+                }
+                else if (text.includes("关") && (text.includes("灯") || text.includes("照明"))) {
+                    let targets = deviceList.value;
+                    if (text.includes("A区") || text.includes("a区")) targets = targets.filter(d => d.region === 'A区');
+                    if (text.includes("B区") || text.includes("b区")) targets = targets.filter(d => d.region === 'B区');
+                    targets.forEach(d => handleHardware(d.deviceId||d.device_id, 'led', 1));
+                    speakText(`好的，已关闭${text.includes("A区")?'A区':(text.includes("B区")?'B区':'所有')}照明`); handled = true;
+                }
+                else if (text.includes("拉响") || text.includes("警报")) {
+                    deviceList.value.forEach(d => handleHardware(d.deviceId||d.device_id, 'buzzer', 0));
+                    speakText("安防系统已激活，警报已拉响"); handled = true;
+                }
+
+                if (!handled) { sendBackgroundChat(text); }
+            };
+
+            const sendBackgroundChat = async (text) => {
+                messages.push({ id: Date.now(), role: 'user', text });
+                const aiId = Date.now()+1;
+                messages.push({ id: aiId, role: 'ai', text: '正在思考...' });
+                if(activeTab.value === 'AI') nextTick(() => document.getElementById('chat-box').scrollTop = 9999);
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/agent/chat`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question: text, sessionId: "pc-admin" })
+                    });
+                    const d = await res.json();
+                    const replyText = d.answer || d.data?.answer || "系统异常";
+                    messages.find(m=>m.id===aiId).text = replyText;
+                    speakText(replyText);
+                } catch(e) { messages.find(m=>m.id===aiId).text = "连接失败"; }
+            };
+
+            const sendChat = () => {
+                if(!userInput.value.trim()) return;
+                processVoiceCommand(userInput.value);
+                userInput.value = "";
+            };
+
+            const startAuthCamera = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const video = document.getElementById('authVideo');
+                    if (video) video.srcObject = stream;
+                } catch(e) {}
+            };
+            const stopAuthCamera = () => {
+                const video = document.getElementById('authVideo');
+                if (video && video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
+            };
+
+            const captureBase64 = (videoId) => {
+                const v = document.getElementById(videoId);
+                if(!v) return null;
+                const c = document.createElement('canvas');
+                c.width = 640; c.height = 480;
+                c.getContext('2d').drawImage(v, 0, 0, 640, 480);
+                return c.toDataURL('image/jpeg', 0.8);
+            };
+
+            const submitAuth = async () => {
+                const base64 = captureBase64('authVideo');
+                if (!base64) return showToast("未捕获到画面", "error");
+
+                authLoading.value = true;
+                if (authMode.value === 'LOGIN') {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/face-rec/login`, {
+                            method: 'POST', headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({ imageBase64: base64 })
+                        });
+                        const data = await res.json();
+
+                        if (data.success && data.user) {
+                            showToast(`核验成功`);
+                            currentUser.value = data.user;
+                            stopAuthCamera();
+                            isLoggedIn.value = true;
+                            nextTick(() => {
+                                window.lucide.createIcons();
+                                startMainApp();
+                                toggleGlobalVoice();
+                                speakText(`欢迎回来，${data.user.name}。数字孪生中枢已就绪，随时为您服务。`);
+                            });
+                        } else { showToast("核验失败", "error"); }
+                    } catch(e) { showToast("服务异常", "error"); }
+                } else {
+                    if (!authForm.name.trim()) { authLoading.value = false; return showToast("请输入姓名", "error"); }
+                    try {
+                        const res = await fetch(`${API_BASE}/api/face-rec/register`, {
+                            method: 'POST', headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({ imageBase64: base64, metadata: { name: authForm.name, role: authForm.role } })
+                        });
+                        const data = await res.json();
+                        if (data.success) { showToast("录入成功"); authMode.value = 'LOGIN'; }
+                        else { showToast("录入失败", "error"); }
+                    } catch(e) {}
+                }
+                authLoading.value = false;
+            };
+
+            const logout = () => {
+                isLoggedIn.value = false;
+                disconnectAlarmSocket();
+                clearInterval(mgmtTimer);
+                window.speechSynthesis?.cancel();
+                if(recognition) recognition.stop();
+                location.reload();
+            };
+
+            const unwrapList = (res) => {
+                if (Array.isArray(res?.data?.items)) return res.data.items;
+                if (Array.isArray(res?.data?.records)) return res.data.records;
+                if (Array.isArray(res?.data?.list)) return res.data.list;
+                if (Array.isArray(res?.items)) return res.items;
+                if (Array.isArray(res?.list)) return res.list;
+                if (Array.isArray(res?.data)) return res.data;
+                if (Array.isArray(res)) return res;
+                return [];
+            };
+
+            const unwrapTotal = (res, fallback = 0) => {
+                return Number(
+                    res?.data?.total ??
+                    res?.total ??
+                    res?.data?.count ??
+                    res?.count ??
+                    fallback
+                ) || 0;
+            };
+
+            const pickNumber = (obj, keys, fallback = 0) => {
+                for (const key of keys) {
+                    const val = obj?.[key];
+                    if (val !== undefined && val !== null && val !== '') {
+                        const num = Number(val);
+                        if (!Number.isNaN(num)) return num;
+                    }
+                }
+                return fallback;
+            };
+
+            const getRuleLevelLabel = (level) => {
+                const val = String(level || '').toLowerCase();
+                if (val.includes('critical') || val.includes('紧急')) return '紧急';
+                return '警告';
+            };
+
+            const getRuleLevelClass = (level) => {
+                const val = String(level || '').toLowerCase();
+                if (val.includes('critical') || val.includes('紧急')) {
+                    return 'bg-red-50 text-red-600 border border-red-100';
+                }
+                return 'bg-amber-50 text-amber-600 border border-amber-100';
+            };
+
+            const normalizeRule = (r) => {
+                const id = r.id ?? r.ruleId ?? r.rule_id;
+                const level = r.level ?? r.alarmLevel ?? 'warning';
+                const actionType = r.actionType ?? r.action ?? r.linkageType ?? 'MQTT';
+                const enabledRaw = r.enabled ?? r.status ?? r.isEnabled ?? 0;
+                const enabled = enabledRaw === true || enabledRaw === 1 || enabledRaw === '1' || String(enabledRaw).toLowerCase() === 'on';
+                return {
+                    ...r,
+                    id,
+                    name: r.name ?? r.ruleName ?? `规则-${id}`,
+                    conditionExpression: r.conditionExpression ?? r.expression ?? r.logicExpression ?? '',
+                    level,
+                    actionType,
+                    enabled,
+                    responseParams: r.responseParams ?? r.params ?? {}
+                };
+            };
+
+            const normalizeFace = (f, idx = 0) => {
+                let parsedMeta = f.metadata;
+                if (typeof parsedMeta === 'string') {
+                    try { parsedMeta = JSON.parse(parsedMeta); } catch(e) {}
+                }
+                return {
+                    ...f,
+                    id: f.id ?? `person-${idx}`,               // 对应表字段: id
+                    name: f.name ?? '未命名',                   // 对应表字段: name
+                    role: f.role ?? 'visitor',                 // 对应表字段: role
+                    metadata: parsedMeta ?? {},                // 对应表字段: metadata
+                    createTime: f.create_time ?? f.createTime  // 对应表字段: create_time
+                };
+            };
+
+            const parseJsonText = (text) => {
+                const trimmed = (text || '').trim();
+                if (!trimmed) return {};
+                try {
+                    return JSON.parse(trimmed);
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            const toJsonText = (obj) => {
+                try {
+                    return JSON.stringify(obj ?? {}, null, 2);
+                } catch (e) {
+                    return '{}';
+                }
+            };
+
+            const generateRuleExpression = () => {
+                const sensor = ruleBuilder.sensor || 'smoke';
+                const op = ruleBuilder.operator || '>';
+                const threshold = Number(ruleBuilder.threshold ?? 0);
+                ruleForm.conditionExpression = `${sensor} ${op} ${threshold}`;
+            };
+
+            const goOpsPage = (subId) => {
+                activeTab.value = 'OPS';
+                opsSubTab.value = subId;
+                fetchAllData();
+            };
+
+            const resetRuleForm = () => {
+                editingRuleId.value = null;
+                ruleForm.name = '';
+                ruleForm.conditionExpression = '';
+                ruleForm.level = 'warning';
+                ruleForm.actionType = 'MQTT';
+                ruleForm.responseParams = '{}';
+                ruleForm.enabled = true;
+                ruleBuilder.sensor = 'smoke';
+                ruleBuilder.operator = '>';
+                ruleBuilder.threshold = 100;
+            };
+
+            const fillRuleForm = (rule) => {
+                editingRuleId.value = rule.id;
+                ruleForm.name = rule.name || '';
+                ruleForm.conditionExpression = rule.conditionExpression || '';
+                ruleForm.level = String(rule.level || '').toLowerCase().includes('critical') ? 'critical' : 'warning';
+                ruleForm.actionType = String(rule.actionType || 'MQTT').toUpperCase();
+                ruleForm.responseParams = toJsonText(rule.responseParams);
+                ruleForm.enabled = !!rule.enabled;
+            };
+
+            const fetchRules = async () => {
+                rulesLoading.value = true;
+                try {
+                    const r = await fetch(`${API_BASE}/api/rules`);
+                    const res = await r.json();
+                    rules.value = unwrapList(res).map(normalizeRule);
+                } catch (e) {
+                    showToast("规则列表获取失败", "error");
+                } finally {
+                    rulesLoading.value = false;
+                }
+            };
+
+            const editRule = async (rule) => {
+                try {
+                    const r = await fetch(`${API_BASE}/api/rules/${rule.id}`);
+                    const res = await r.json();
+                    const detail = normalizeRule(res?.data || res || rule);
+                    fillRuleForm(detail);
+                    goOpsPage('RULE_FORM');
+                } catch (e) {
+                    fillRuleForm(rule);
+                    goOpsPage('RULE_FORM');
+                }
+            };
+
+            const saveRule = async () => {
+                if (!ruleForm.name.trim()) return showToast("请输入规则名称", "error");
+                if (!ruleForm.conditionExpression.trim()) return showToast("请先生成或填写逻辑表达式", "error");
+                const parsed = parseJsonText(ruleForm.responseParams);
+                if (parsed === null) return showToast("响应参数不是合法 JSON", "error");
+
+                const payload = {
+                    name: ruleForm.name.trim(),
+                    ruleName: ruleForm.name.trim(),
+                    conditionExpression: ruleForm.conditionExpression.trim(),
+                    expression: ruleForm.conditionExpression.trim(),
+                    logicExpression: ruleForm.conditionExpression.trim(),
+                    level: ruleForm.level,
+                    alarmLevel: ruleForm.level,
+                    actionType: ruleForm.actionType,
+                    action: ruleForm.actionType,
+                    responseParams: parsed,
+                    params: parsed,
+                    enabled: ruleForm.enabled ? 1 : 0
+                };
+
+                try {
+                    if (editingRuleId.value) {
+                        await fetch(`${API_BASE}/api/rules/${editingRuleId.value}`, {
+                            method: 'PUT',
+                            headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify(payload)
+                        });
+                        showToast("规则修改成功");
+                    } else {
+                        await fetch(`${API_BASE}/api/rules`, {
+                            method: 'POST',
+                            headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify(payload)
+                        });
+                        showToast("规则创建成功");
+                    }
+                    await fetchRules();
+                    goOpsPage('RULE_LIST');
+                    resetRuleForm();
+                } catch (e) {
+                    showToast("规则保存失败", "error");
+                }
+            };
+
+            const removeRule = async (rule) => {
+                if (!confirm(`确认删除规则「${rule.name}」吗？`)) return;
+                try {
+                    await fetch(`${API_BASE}/api/rules/${rule.id}`, { method: 'DELETE' });
+                    rules.value = rules.value.filter(r => r.id !== rule.id);
+                    showToast("规则已删除");
+                } catch (e) {
+                    showToast("删除规则失败", "error");
+                }
+            };
+
+            const toggleRule = async (rule) => {
+                const nextEnabled = !rule.enabled;
+                try {
+                    const res = await fetch(`${API_BASE}/api/rules/${rule.id}/toggle`, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ enabled: nextEnabled ? 1 : 0 })
+                    });
+                    if (!res.ok) {
+                        await fetch(`${API_BASE}/api/rules/${rule.id}/toggle`, { method: 'POST' });
+                    }
+                    rule.enabled = nextEnabled;
+                    showToast(nextEnabled ? "规则已启用" : "规则已禁用");
+                } catch (e) {
+                    showToast("规则状态切换失败", "error");
+                }
+            };
+
+            const openFaceModal = () => {
+                showFaceModal.value = true;
+                faceRegisterForm.name = '';
+                faceRegisterForm.role = 'visitor';
+                faceRegisterForm.metadataStr = '{}';
+                faceRegisterForm.imageBase64 = '';
+                nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+            };
+
+            const onFaceFileChange = (event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    faceRegisterForm.imageBase64 = String(reader.result || '');
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const loadFaces = async (page = facePage.value) => {
+                faceLoading.value = true;
+                try {
+                    // 调用您 Controller 里的接口获取所有数据
+                    const r = await fetch(`${API_BASE}/api/face-rec/persons`);
+                    const res = await r.json();
+
+                    // 解析您的 { code: 200, data: [...] } 格式
+                    let list = unwrapList(res).map(normalizeFace);
+
+                    // 前端实现本地搜索与角色筛选（因为后端接口暂时没接参数）
+                    if (faceSearch.value.trim()) {
+                        const kw = faceSearch.value.trim().toLowerCase();
+                        list = list.filter(f => f.name.toLowerCase().includes(kw));
+                    }
+                    if (faceRoleFilter.value) {
+                        list = list.filter(f => f.role === faceRoleFilter.value);
+                    }
+
+                    // 前端实现分页计算
+                    faceTotal.value = list.length;
+                    facePage.value = page;
+                    const start = (page - 1) * faceSize.value;
+                    const end = start + faceSize.value;
+
+                    // 将当页数据赋值给表格
+                    faceList.value = list.slice(start, end);
+                } catch (e) {
+                    showToast("人员档案加载失败，请检查后端是否启动", "error");
+                } finally {
+                    faceLoading.value = false;
+                }
+            };
+
+            const submitFaceRegister = async () => {
+                if (!faceRegisterForm.name.trim()) return showToast("请输入姓名", "error");
+
+                let metaObj = {};
+                try {
+                    if (faceRegisterForm.metadataStr.trim()) metaObj = JSON.parse(faceRegisterForm.metadataStr);
+                } catch(e) { return showToast("附加信息必须是合法的 JSON", "error"); }
+
+                metaObj.name = faceRegisterForm.name.trim();
+
+                try {
+                    const payload = {
+                        imageBase64: faceRegisterForm.imageBase64,
+                        role: faceRegisterForm.role,
+                        metadata: metaObj
+                    };
+                    await fetch(`${API_BASE}/api/face-rec/register`, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    showFaceModal.value = false;
+                    showToast("新人员档案录入成功");
+                    loadFaces(1);
+                    refreshOverviewStats();
+                } catch (e) {
+                    showToast("录入失败", "error");
+                }
+            };
+
+            const deleteFace = async (face) => {
+                if (!confirm(`确认删除 ${face.name} 的档案吗？`)) return;
+                try {
+                    // 发送 DELETE 请求到您的接口，带上 UUID
+                    await fetch(`${API_BASE}/api/face-rec/persons/${face.id}`, { method: 'DELETE' });
+
+                    showToast("档案已成功删除");
+                    // 删完后重新请求列表，刷新画面
+                    loadFaces(facePage.value);
+                    refreshOverviewStats();
+                } catch (e) {
+                    showToast("删除失败，请检查网络", "error");
+                }
+            };
+
+            const submitDeviceRegister = async () => {
+                if (!deviceRegisterForm.deviceId.trim()) return showToast("请输入设备ID", "error");
+                if (!deviceRegisterForm.name.trim()) return showToast("请输入设备名称", "error");
+                try {
+                    const payload = {
+                        deviceId: deviceRegisterForm.deviceId.trim(),
+                        name: deviceRegisterForm.name.trim(),
+                        region: deviceRegisterForm.region.trim(),
+                        location: (deviceRegisterForm.location || '').trim()
+                    };
+                    await fetch(`${API_BASE}/api/devices`, {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    showToast("新设备台账注册完毕");
+                    deviceRegisterForm.deviceId = '';
+                    deviceRegisterForm.name = '';
+                    deviceRegisterForm.region = '';
+                    deviceRegisterForm.location = '';
+                    await fetchAllData();
+                    goOpsPage('DEVICE_LEDGER');
+                } catch (e) {
+                    showToast("注册失败", "error");
+                }
+            };
+
+            const openDeviceEdit = (d) => {
+                editingDevice.value = d;
+                deviceEditForm.name = d.name || '';
+                deviceEditForm.region = d.region || '';
+                deviceEditForm.location = d.location || d.deployArea || '';
+                nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+            };
+
+            const closeDeviceEdit = () => {
+                editingDevice.value = null;
+                deviceEditForm.name = '';
+                deviceEditForm.region = '';
+                deviceEditForm.location = '';
+            };
+
+            const saveDeviceEdit = async () => {
+                if (!editingDevice.value) return;
+                const id = editingDevice.value.deviceId || editingDevice.value.device_id;
+                try {
+                    await fetch(`${API_BASE}/api/devices/${id}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({
+                            name: deviceEditForm.name,
+                            region: deviceEditForm.region,
+                            location: deviceEditForm.location
+                        })
+                    });
+                    closeDeviceEdit();
+                    await fetchAllData();
+                    showToast("设备信息已更新");
+                } catch (e) {
+                    showToast("设备更新失败", "error");
+                }
+            };
+
+            const removeDevice = async (d) => {
+                const id = d.deviceId || d.device_id;
+                if (!confirm(`确认注销设备 ${d.name || id} 吗？`)) return;
+                try {
+                    await fetch(`${API_BASE}/api/devices/${id}`, { method: 'DELETE' });
+                    deviceList.value = deviceList.value.filter(x => (x.deviceId || x.device_id) !== id);
+                    showToast("设备已注销");
+                    refreshOverviewStats();
+                } catch (e) {
+                    showToast("设备删除失败", "error");
+                }
+            };
+
+            const refreshOverviewStats = async () => {
+                const onlineDev = deviceList.value.filter(d => d.status === 1 || d.status === '在线' || d.status === '1').length;
+                overviewStats.onlineDevices = onlineDev;
+                overviewStats.pendingWorkorders = workOrders.value.length;
+                overviewStats.todayAlarms = alarms.value.length;
+
+                try {
+                    const r = await fetch(`${API_BASE}/api/statistics/alarms`);
+                    const res = await r.json();
+                    const src = res?.data || res || {};
+                    overviewStats.todayAlarms = pickNumber(src, ['today', 'todayCount', 'todayAlarms', 'todayAlarm', 'daily'], overviewStats.todayAlarms);
+                } catch (e) {}
+
+                try {
+                    const r = await fetch(`${API_BASE}/api/face-rec/list?page=1&size=1`);
+                    const res = await r.json();
+                    const list = unwrapList(res);
+                    overviewStats.faceCount = unwrapTotal(res, list.length);
+                } catch (e) {
+                    overviewStats.faceCount = faceTotal.value || faceList.value.length;
+                }
+            };
+
+            const syncSensorCards = async () => {
+                try {
+                    const r = await fetch(`${API_BASE}/api/sensors/latest`);
+                    const res = await r.json();
+                    const rows = unwrapList(res);
+                    if (!rows.length) return;
+                    const avg = (keys) => {
+                        let sum = 0;
+                        let count = 0;
+                        rows.forEach(row => {
+                            for (const key of keys) {
+                                const val = Number(row?.[key]);
+                                if (!Number.isNaN(val)) {
+                                    sum += val;
+                                    count += 1;
+                                    break;
+                                }
+                            }
+                        });
+                        return count ? (sum / count).toFixed(1) : '--';
+                    };
+                    sensorStats[0].value = avg(['temperature', 'temp']);
+                    sensorStats[1].value = avg(['humidity']);
+                    sensorStats[2].value = avg(['light', 'illumination', 'lux']);
+                    sensorStats[3].value = avg(['smoke', 'smokePpm', 'smoke_ppm']);
+                } catch (e) {}
+            };
+
+            let alarmSocket = null;
+            const connectAlarmSocket = () => {
+                if (alarmSocket) return;
+                try {
+                    const wsBase = API_BASE.replace(/^http/i, 'ws');
+                    alarmSocket = new WebSocket(`${wsBase}/ws/alarm`);
+                    alarmSocket.onmessage = (event) => {
+                        try {
+                            const payload = JSON.parse(event.data || '{}');
+                            const list = Array.isArray(payload) ? payload : [payload];
+                            list.forEach(item => {
+                                const alarm = {
+                                    ...item,
+                                    id: item.id ?? item.alarmId ?? `${Date.now()}-${Math.random()}`,
+                                    content: item.content ?? item.message ?? '实时告警',
+                                    level: item.level ?? item.severity ?? 'warning',
+                                    create_time: item.create_time ?? item.createTime ?? new Date().toISOString()
+                                };
+                                alarms.value.unshift(alarm);
+                            });
+                            alarms.value = alarms.value.slice(0, 100);
+                            refreshOverviewStats();
+                        } catch (e) {}
+                    };
+                    alarmSocket.onclose = () => { alarmSocket = null; };
+                    alarmSocket.onerror = () => { alarmSocket = null; };
+                } catch (e) {}
+            };
+
+            const disconnectAlarmSocket = () => {
+                if (alarmSocket) {
+                    alarmSocket.close();
+                    alarmSocket = null;
+                }
+            };
+
+            const fetchAllData = async () => {
+                if(!isLoggedIn.value) return;
+
+                try {
+                    const r = await fetch(`${API_BASE}/api/devices`);
+                    const res = await r.json();
+                    deviceList.value = res.data?.items || res.data || res || [];
+
+                    if (selectedDevice.value) {
+                        const currentId = selectedDevice.value.deviceId || selectedDevice.value.device_id;
+                        const updatedDev = deviceList.value.find(d => (d.deviceId || d.device_id) === currentId);
+                        if (updatedDev) selectedDevice.value = updatedDev;
+                    }
+                } catch(e) {}
+
+                try {
+                    const r = await fetch(`${API_BASE}/api/face-rec/access-logs`);
+                    const res = await r.json();
+                    accessLogs.value = res.data?.items || res.data || res || [];
+                } catch(e) {}
+
+                try {
+                    const r = await fetch(`${API_BASE}/api/alarms/recent?limit=50`);
+                    const res = await r.json();
+                    const rawAlarms = res.data?.items || res.data || res || [];
+                    alarms.value = rawAlarms.filter(a => a.handled === 0 || a.handled === false || !a.handled);
+                } catch(e) {}
+
+                try {
+                    const r = await fetch(`${API_BASE}/api/workorders?page=1&size=50`);
+                    const res = await r.json();
+                    const rawOrders = res.data?.items || res.items || res.data || res || [];
+                    workOrders.value = rawOrders.filter(w => w.status !== 'completed' && w.status !== '已完成');
+                } catch(e) {}
+
+                if (activeTab.value === 'DASH' || (activeTab.value === 'OPS' && opsSubTab.value === 'OVERVIEW')) {
+                    await syncSensorCards();
+                }
+
+                if (activeTab.value === 'OPS') {
+                    if (opsSubTab.value === 'RULE_LIST' || opsSubTab.value === 'RULE_FORM') {
+                        await fetchRules();
+                    }
+                    if (opsSubTab.value === 'FACE_ARCHIVE') {
+                        await loadFaces(facePage.value);
+                    }
+                }
+
+                refreshOverviewStats();
+            };
+
+            const startMainApp = () => {
+                fetchAllData();
+                globalDataInterval = setInterval(fetchAllData, 5000);
+                mgmtTimer = setInterval(() => { mgmtNow.value = new Date(); }, 1000);
+                connectAlarmSocket();
+                window.speechSynthesis.getVoices();
+            };
+
+            const handleHardware = async (deviceId, type, currentStatus) => {
+                const isCurrentlyOn = currentStatus === 1 || currentStatus === '1';
+                const action = isCurrentlyOn ? 'off' : 'on';
+                const newStatus = isCurrentlyOn ? 0 : 1;
+
+                if (selectedDevice.value) {
+                    if (type === 'led') { selectedDevice.value.ledStatus = newStatus; selectedDevice.value.led_status = newStatus; }
+                    if (type === 'light') { selectedDevice.value.lightStatus = newStatus; selectedDevice.value.light_status = newStatus; }
+                    if (type === 'buzzer') { selectedDevice.value.buzzerStatus = newStatus; selectedDevice.value.buzzer_status = newStatus; }
+                    if (type === 'motor') { selectedDevice.value.motorStatus = newStatus; selectedDevice.value.motor_status = newStatus; }
+                }
+
+                try {
+                    await fetch(`${API_BASE}/api/device/${deviceId}/${type}/${action}`, { method: 'POST' });
+                    fetchAllData();
+                } catch (e) {
+                    showToast("设备通讯异常，请检查网络", "error");
+                }
+            };
+
+            const handleArm = async (d) => {
+                const isArmed = d.armStatus === 1 || d.arm_status === 1;
+                const action = isArmed ? 'disarm' : 'arm';
+                try {
+                    const did = d.deviceId || d.device_id;
+                    await fetch(`${API_BASE}/api/device/${did}/${action}`, { method: 'POST' });
+                    fetchAllData();
+                } catch(e) {}
+            };
+
+            const handleAlarm = async (id) => {
+                alarms.value = alarms.value.filter(a => a.id !== id);
+                showToast("告警已标记处理", "success");
+                refreshOverviewStats();
+
+                try {
+                    await fetch(`${API_BASE}/api/alarms/${id}/handle?handler=${currentUser.value?.name||'Admin'}`, { method: 'PUT' });
+                } catch(e) {
+                    showToast("网络异常，处理失败", "error");
+                    fetchAllData();
+                }
+            };
+
+            const completeWorkOrder = async (id) => {
+                workOrders.value = workOrders.value.filter(w => w.id !== id);
+                showToast("工单已归档", "success");
+                refreshOverviewStats();
+
+                try {
+                    await fetch(`${API_BASE}/api/workorders/${id}/status`, {
+                        method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status: 'completed'})
+                    });
+                } catch(e) {
+                    fetchAllData();
+                }
+            };
+
+            const updateChartData = async () => {
+                if (!myChart) return;
+
+                let lineName = '环境监控'; let lineUnit = '';
+                if (chartField.value === 'temperature') { lineName = '环境温度'; lineUnit = '℃'; }
+                else if (chartField.value === 'humidity') { lineName = '空气湿度'; lineUnit = '%'; }
+                else if (chartField.value === 'light') { lineName = '光照强度'; lineUnit = 'lx'; }
+                else if (chartField.value === 'smoke') { lineName = '烟雾浓度'; lineUnit = 'ppm'; }
+
+                let dynamic24hLabels = [];
+                let now = new Date();
+                for (let i = 23; i >= 0; i--) {
+                    let d = new Date(now.getTime() - i * 60 * 60 * 1000);
+                    let hourLabel = d.getHours().toString().padStart(2, '0') + ':00';
+                    dynamic24hLabels.push(hourLabel);
+                }
+
+                const renderChart = (labels, values, isReal) => {
+                    myChart.setOption({
+                        tooltip: {
+                            trigger: 'axis', backgroundColor: '#fff', textStyle: {color: '#1d1d1f'}, borderRadius: 12,
+                            formatter: function (params) {
+                                if(!params[0].value) return `${params[0].axisValue} <br/> 暂无数据`;
+                                return `<div class="font-medium text-xs text-gray-500 mb-1">${params[0].axisValue} ${isReal ? '<span class="text-green-500">(实时监控)</span>' : '<span class="text-orange-400">(无数据兜底)</span>'}</div>
+                                        <div class="flex items-center gap-2 font-bold text-sm">
+                                            ${params[0].marker} ${lineName}: <span class="text-[#0071e3] text-lg ml-1">${params[0].value}</span> ${lineUnit}
+                                        </div>`;
+                            }
+                        },
+                        grid: { left: '2%', right: '4%', bottom: '0%', top: '15%', containLabel: true },
+                        xAxis: { type: 'category', data: labels, axisLabel: { color: '#86868b', margin: 16 }, axisLine: { lineStyle: {color: '#e5e5ea'} }, axisTick: {show: false} },
+                        yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f2f2f7' } }, axisLabel: { color: '#86868b' }, scale: true },
+                        series: [{
+                            name: lineName, data: values, type: 'line', smooth: true, symbolSize: 8,
+                            connectNulls: true,
+                            lineStyle: { width: 4, color: '#0071e3' },
+                            itemStyle: { color: '#0071e3', borderWidth: 2, borderColor: '#fff' },
+                            areaStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [{offset:0, color: 'rgba(0,113,227,0.15)'}, {offset:1, color:'rgba(0,113,227,0)'}]) }
+                        }]
+                    }, true);
+                };
+
+                renderChart(dynamic24hLabels, new Array(24).fill(0), false);
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/statistics/sensors/trend?deviceId=1&field=${chartField.value}&hours=24`);
+                    if (res.ok) {
+                        const d = await res.json();
+                        const dbLabels = d.labels || [];
+                        const dbValues = d.values || [];
+
+                        if (dbLabels.length > 0) {
+                            let realMappedValues = new Array(24).fill(null);
+                            for (let i = 0; i < dbLabels.length; i++) {
+                                let targetIdx = dynamic24hLabels.indexOf(dbLabels[i]);
+                                if (targetIdx !== -1) {
+                                    realMappedValues[targetIdx] = dbValues[i] !== null ? Number(dbValues[i]).toFixed(1) : null;
+                                }
+                            }
+                            renderChart(dynamic24hLabels, realMappedValues, true);
+                        }
+                    }
+                } catch (e) {}
+            };
+
+            const initChart = () => {
+                const dom = document.getElementById('mainChart');
+                if (dom) { if (myChart) myChart.dispose(); myChart = echarts.init(dom); updateChartData(); }
+            };
+
+            onMounted(() => {
+                startAuthCamera();
+                nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+                window.addEventListener('resize', () => { if(myChart) myChart.resize(); });
+            });
+
+            watch(activeTab, (newTab) => {
+                if(!isLoggedIn.value) return;
+                nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+
+                if(newTab === 'DASH') setTimeout(initChart, 400);
+
+                if(newTab !== 'VISION' && isCameraOn.value) { isCameraOn.value = false; toggleVision(false); }
+                if(newTab !== 'DEVICE') {
+                    if (isPatrolling.value) stopPatrol();
+                    if (isSimulating.value) isSimulating.value = false;
+                }
+            });
+
+            watch(activeSubTab, () => {
+                if(!isLoggedIn.value) return;
+                nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+            });
+
+            watch(opsSubTab, () => {
+                if(!isLoggedIn.value) return;
+                nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+                if (activeTab.value === 'OPS') fetchAllData();
+            });
+
+            return {
+                isLoggedIn, authMode, authLoading, authForm, currentUser, submitAuth, logout,
+                activeTab, activeSubTab, menus, selectMenu, selectSubMenu, openPersonnel,
+                selectedRegion, filteredDevices, alarmTitle, formatTime,
+                deviceList, alarms, workOrders, accessLogs, sensorStats, toast,
+                opsSubTab, opsPageTitle, mgmtNow, formatManagementTime, overviewStats, overviewAlarmFeed,
+                goOpsPage, syncSensorCards,
+                showRuleForm, rules, rulesLoading, editingRuleId, ruleForm, ruleBuilder, fetchRules, resetRuleForm, generateRuleExpression, editRule, saveRule, removeRule, toggleRule, getRuleLevelClass, getRuleLevelLabel,
+                faceSearch, faceRoleFilter, faceList, facePage, faceSize, faceTotal, totalFacePages, faceLoading, loadFaces, showFaceModal, faceRegisterForm, openFaceModal, onFaceFileChange, submitFaceRegister, deleteFace,
+                showDeviceRegister, deviceRegisterForm, submitDeviceRegister,
+                ledgerStatusFilter, filteredLedgerDevices, fetchAllData, openDeviceEdit, removeDevice, editingDevice, deviceEditForm, closeDeviceEdit, saveDeviceEdit,
+                visionMode, setVisionMode, isCameraOn, visionResult, behaviorResult, secIdentity, securityHasAlert, securityAlertSummary,
+                userInput, messages, chartField,
+                isRecording, isGlobalListening, toggleGlobalVoice, startVoiceChat,
+                handleHardware, handleArm, handleAlarm, completeWorkOrder, updateChartData, sendChat,
+                toggleVision,
+                selectedDevice, aDevices, bDevices, worldTransform, standUpTransform, getDeviceLocalStyle, getDotStatus, getDotColorClass, openDevicePanel,
+                isPatrolling, togglePatrol,
+                isForceFieldActive, toggleForceField, isSimulating, runCrossValidationDemo
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

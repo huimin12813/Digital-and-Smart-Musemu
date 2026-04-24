@@ -1,0 +1,7 @@
+老师您好，本项目依赖 MySQL 数据库，为确保项目顺利运行，请您在启动前完成以下简单配置：
+1. 还原数据库
+请在您的本地 MySQL 中，新建一个名为 museum 的数据库。然后运行本项目根目录下的 museum.sql 文件，即可自动还原完整的表结构与测试数据。
+2. 修改数据库密码
+请打开项目中的 src/main/resources/application.yml 文件，找到 spring.datasource.password，将其修改为您电脑上 MySQL 的真实密码。
+3. 启动项目
+本项目已内置 AI 模型文件及云端大语言模型 API，无需配置繁杂的本地 AI 环境，修改完数据库配置后，直接运行 MuseumPcApplication 即可体验！
